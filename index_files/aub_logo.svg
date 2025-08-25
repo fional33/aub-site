@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1400" height="320" viewBox="0 0 1400 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="holo" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"  stop-color="#67E8F9"/>
+      <stop offset="50%" stop-color="#7DD3FC"/>
+      <stop offset="100%" stop-color="#C084FC"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="b2"/>
+      <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glitch" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="2" seed="73" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="scan" width="4" height="6" patternUnits="userSpaceOnUse">
+      <rect width="4" height="2" fill="#0B0F14" opacity="0.9"/>
+      <rect y="2" width="4" height="4" fill="#000000" opacity="0"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="none"/>
+  <g stroke="url(#holo)" stroke-width="28" stroke-linecap="square" stroke-linejoin="miter" filter="url(#glow)">
+    <path d="M110 160 L200 95" />
+    <path d="M110 160 L200 225" />
+    <path d="M1200 95 L1290 160" />
+    <path d="M1290 160 L1200 225" />
+  </g>
+  <g fill="url(#holo)" filter="url(#glow)">
+    <path d="M310,260 L380,60 L450,260 Z M344,200 L416,200 L380,110 Z" fill-rule="evenodd" filter="url(#glitch)"/>
+    <rect x="342" y="190" width="76" height="28" />
+    <path d="M520,60 L520,200 Q520,260 590,260 L700,260 Q770,260 770,200 L770,60 L720,60
+             L720,198 Q720,228 690,228 L600,228 Q570,228 570,198 L570,60 Z" filter="url(#glitch)"/>
+    <path d="M860,60 L860,260 L910,260 L1010,260 Q1080,260 1080,212 Q1080,176 1040,160
+             Q1080,144 1080,100 Q1080,60 1010,60 L910,60 Z
+             M910,92 L1004,92 Q1038,92 1038,112 Q1038,136 1004,136 L910,136 Z
+             M910,168 L1008,168 Q1046,168 1046,194 Q1046,228 1008,228 L910,228 Z" filter="url(#glitch)"/>
+  </g>
+  <rect width="100%" height="100%" fill="url(#scan)" opacity="0.06"/>
+</svg>
