@@ -1,1 +1,5 @@
 .vercel
+
+# local backups
+AUBSNAP-backup*.tar.gz
+index.html.bak.*
