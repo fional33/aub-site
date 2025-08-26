@@ -5,9 +5,9 @@
   <title>AURA BYTE ($AUB) — LEGAL TERMS</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark light" />
-  <!-- BUILD: AUB-LEGAL v22 (final-inline, no-rewrites, NO TOC) -->
+  <!-- BUILD: AUB-LEGAL // FINAL (inline-css, no-rewrites, NO TOC) -->
   <style>
-    /* === RESET === */
+    /* Reset */
     *,*::before,*::after{box-sizing:border-box}
     html{color-scheme:dark;-webkit-text-size-adjust:100%}
     body{
@@ -17,12 +17,9 @@
       background:#0b0f14; color:#e8ebef;
       text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased
     }
-    :root{
-      --bg:#0b0f14; --fg:#e8ebef; --muted:#9aa3ad; --rule:#ffffff33;
-      --a1:#59e6ff; --a2:#c6a7ff
-    }
+    :root{--bg:#0b0f14;--fg:#e8ebef;--muted:#9aa3ad;--rule:#ffffff33;--a1:#59e6ff;--a2:#c6a7ff}
 
-    /* === BACKGROUND DEPTH (subtle vignettes + faint grid) === */
+    /* Subtle depth (vignettes + faint grid) */
     body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none}
     body::before{
       z-index:-2;
@@ -39,7 +36,7 @@
       opacity:.22;
     }
 
-    /* === LAYOUT & TYPE === */
+    /* Layout */
     main{max-width:72ch;margin:0 auto;padding:6rem 1.25rem 5rem}
     header{margin-bottom:1.25rem}
     .kicker{letter-spacing:.18em;font-size:.85rem;color:var(--muted);display:block}
@@ -48,7 +45,7 @@
     p{margin:.85rem 0}
     hr{border:0;height:1px;background:linear-gradient(90deg,transparent,var(--rule),transparent);margin:2.2rem 0}
 
-    /* === BANNER: SINGLE GRADIENT TEXT ANIMATION (prefers-reduced-motion respected) === */
+    /* Footer chant (single gradient animation; respects reduced motion) */
     .banner{display:flex;align-items:center;justify-content:center;margin:5rem 0 1rem}
     .chant{
       font-weight:1000;letter-spacing:.08em;
@@ -59,11 +56,11 @@
     }
     @keyframes aura{from{background-position:0% 50%}to{background-position:200% 50%}}
 
-    /* === LINKS === */
+    /* Links */
     a{color:inherit;text-decoration:underline dotted;text-underline-offset:.19em}
     a:hover{text-decoration-style:solid}
 
-    /* === PRINT === */
+    /* Print */
     @media print{
       html{color-scheme:light}
       body{background:#fff;color:#000}
@@ -73,7 +70,7 @@
       a{color:#000;text-decoration:underline}
     }
 
-    /* === REDUCE MOTION === */
+    /* Motion */
     @media (prefers-reduced-motion:reduce){.chant{animation:none}}
   </style>
 </head>
