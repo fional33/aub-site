@@ -4,101 +4,175 @@
   <meta charset="utf-8" />
   <meta http-equiv="x-ua-compatible" content="ie=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AURA BYTE ($AUB) — LEGAL TERMS</title>
+  <title>AURA BYTE ($AUB) — LEGAL TERMS, RISK DISCLOSURE, AND USER AGREEMENT</title>
   <meta name="color-scheme" content="dark light" />
   <style>
     :root{
-      --fg:#eae7ef;
-      --muted:#b8b2c6;
-      --bg:#0b0a10;
-      --card:#0f0e16;
-      --grid:#191825;
-      --link:#c8b6ff;
+      --fg:#f1eef7;
+      --muted:#bdb8cf;
+      --bg:#090813;
+      --grid:#1a1830;
+      --rule:#2a2741;
+      --link:#cdbbff;
+      --shadow:rgba(0,0,0,.35);
     }
     @media (prefers-color-scheme: light){
-      :root{ --fg:#0b0a10; --muted:#38354a; --bg:#ffffff; --card:#ffffff; --grid:#f2f2f7; --link:#5533cc; }
+      :root{ --fg:#0a0a12; --muted:#3a3751; --bg:#ffffff; --grid:#e9e9f2; --rule:#e1e1ea; --link:#4b33cc; --shadow:rgba(0,0,0,.08); }
     }
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
+
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; }
     body{
       margin:0;
       color:var(--fg);
       background:
-        radial-gradient(1200px 600px at 20% -10%, #59e6ff12, transparent 60%),
-        radial-gradient(900px 520px at 80% -20%, #c6a7ff12, transparent 60%),
-        radial-gradient(1000px 800px at 50% 120%, #8b5cf61a, transparent 60%),
-        linear-gradient(180deg, rgba(10,10,16,0.92), rgba(7,6,12,0.98)),
+        radial-gradient(1200px 600px at 20% -10%, #59e6ff16, transparent 60%),
+        radial-gradient(900px 520px at 80% -20%, #c6a7ff18, transparent 60%),
+        radial-gradient(1100px 820px at 50% 120%, #8b5cf624, transparent 62%),
+        linear-gradient(180deg, rgba(10,10,16,0.94), rgba(7,6,12,0.98)),
         var(--bg);
       min-height:100dvh;
       font-family: ui-serif, Charter, Georgia, Cambria, "Times New Roman", Times, serif;
-      line-height:1.65;
-      letter-spacing:.005em;
+      line-height:1.7;
+      letter-spacing:.004em;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x:hidden;
     }
+
+    /* Gentle animated aura field under everything */
+    .bgfx{
+      position:fixed; inset:-12% -12% -12% -12%;
+      z-index:0;
+      background:
+        conic-gradient(from 120deg at 30% 40%, rgba(99,102,241,.12), transparent 55%),
+        radial-gradient(40% 60% at 70% 20%, rgba(125,211,252,.10), transparent 60%),
+        radial-gradient(30% 40% at 20% 80%, rgba(196,181,253,.08), transparent 60%);
+      filter: blur(40px) saturate(130%);
+      opacity:.45;
+      transform: scale(1.1);
+      animation: swirl 48s linear infinite;
+    }
+    @keyframes swirl { to { transform: rotate(360deg) scale(1.1); } }
+    @media (prefers-reduced-motion: reduce){ .bgfx{ animation:none; } }
+
+    /* Subtle grid for authority */
     .grid-overlay{
-      position:fixed; inset:0; pointer-events:none; z-index:0;
+      position:fixed; inset:0; pointer-events:none; z-index:1;
       background-image:
         linear-gradient(to right, var(--grid) 1px, transparent 1px),
         linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
       background-size: 64px 64px, 64px 64px;
-      opacity:.18;
+      opacity:.22;
       mix-blend-mode:soft-light;
     }
-    main{ position:relative; z-index:1; max-width:900px; margin:0 auto; padding:64px 20px 96px; }
-    header{
-      padding:32px 20px 12px; margin:0 0 8px; border-bottom:1px solid #2a273b;
-      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
-      backdrop-filter:saturate(120%) blur(2px);
+
+    main{
+      position:relative; z-index:2;
+      max-width: 980px; margin: 0 auto;
+      padding: 72px 20px 110px;
     }
-    .eyebrow{ display:block; font-size:.78rem; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
-    h1{ margin:0 0 10px 0; font-size: clamp(24px, 3.5vw, 34px); letter-spacing:.03em; font-weight:700; }
-    .subtitle{ color:var(--muted); font-size: clamp(13px, 2.2vw, 15px); margin-top:0; }
-    article{ margin-top:28px; }
-    section{ padding:20px 0; border-top:1px solid #231f2f; }
-    section:first-of-type{ border-top:none; padding-top:0; }
-    h2{ font-size: clamp(16px, 2.4vw, 18px); letter-spacing:.03em; margin:0 0 6px; font-weight:700; }
-    p, li{ font-size: clamp(14.5px, 2.2vw, 16.5px); margin:10px 0; }
-    a{ color:var(--link); text-underline-offset:2px; }
-    strong{ font-weight:700; }
-    .note{ color:var(--muted); }
-    .aura{ margin:56px auto 0; padding:36px 0 8px; text-align:center; border-top:1px solid #2a273b; }
-    .aura .chant{
-      font-size: clamp(18px, 4.6vw, 40px);
+
+    header{
+      padding: 36px 20px 14px;
+      margin: 0 0 12px;
+      border-bottom: 1px solid var(--rule);
+      background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0));
+      backdrop-filter: saturate(120%) blur(1.5px);
+      box-shadow: 0 8px 24px var(--shadow);
+    }
+
+    .eyebrow{
+      display:block; font-size:.78rem; letter-spacing:.24em;
+      text-transform:uppercase; color:var(--muted);
+      margin-bottom:10px; opacity:.95;
+    }
+
+    h1{
+      margin:0 0 12px 0;
+      font-size: clamp(26px, 4.2vw, 40px);
+      letter-spacing:.04em;
       font-weight:800;
-      letter-spacing:.12em;
+      font-variant-caps: small-caps;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .subtitle{
+      color:var(--muted);
+      font-size: clamp(13.5px, 2.4vw, 15.5px);
+      margin-top:0;
+    }
+
+    article{ margin-top:30px; }
+    section{ padding:22px 0; border-top:1px solid #231f2f; }
+    section:first-of-type{ border-top:none; padding-top:0; }
+
+    h2{
+      font-size: clamp(16px, 2.5vw, 19px);
+      letter-spacing:.045em;
+      margin:0 0 6px;
+      font-weight:800;
+      font-variant-caps: small-caps;
+      text-transform:none;
+    }
+
+    p, li{
+      font-size: clamp(15.5px, 2.2vw, 17.5px);
+      margin:10px 0;
+    }
+
+    a{ color:var(--link); text-underline-offset: 2px; }
+    strong{ font-weight:800; }
+    .note{ color:var(--muted); }
+
+    .aura{
+      margin:64px auto 0; padding:40px 0 10px;
+      text-align:center; border-top:1px solid var(--rule);
+    }
+    .aura .chant{
+      font-size: clamp(22px, 5.2vw, 48px);
+      font-weight:900;
+      letter-spacing:.16em;
       text-transform:uppercase;
       background: linear-gradient(90deg, #7dd3fc, #c4b5fd, #f0abfc, #7dd3fc);
       -webkit-background-clip:text; background-clip:text; color:transparent;
       background-size:200% 100%;
-      animation: aura 5s linear infinite;
-      text-shadow: 0 0 24px rgba(124, 58, 237, 0.18);
+      animation: aura 5.2s linear infinite;
+      text-shadow: 0 0 28px rgba(124, 58, 237, 0.22);
       display:inline-block;
     }
     @keyframes aura { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
     @media (prefers-reduced-motion: reduce){ .aura .chant{ animation:none; background-size:100% 100%; } }
-    footer{ color:var(--muted); font-size:.82rem; text-align:center; padding:8px 0 16px; }
+
+    footer{
+      color:var(--muted); font-size:.82rem; text-align:center; padding:8px 0 16px;
+    }
+
     @media print{
-      body{ background:#fff !important; color:#000 !important; }
-      .grid-overlay{ display:none !important; }
-      header{ border:0; background:none; }
+      body{ background:#ffffff !important; color:#000 !important; }
+      .bgfx, .grid-overlay{ display:none !important; }
+      header{ border:0; background:none; box-shadow:none; }
       .aura .chant{ color:#000 !important; -webkit-text-fill-color:#000 !important; background:none !important; text-shadow:none !important; }
       a{ color:#000 !important; text-decoration:underline; }
     }
   </style>
 </head>
 <body>
-  <!-- BUILD: AUB-LEGAL v15 (inline-css, no-rewrites) -->
+  <!-- BUILD: AUB-LEGAL v16 (inline-css, no-rewrites) -->
+  <div class="bgfx" aria-hidden="true"></div>
   <div class="grid-overlay" aria-hidden="true"></div>
+
   <main role="main">
     <header>
       <span class="eyebrow">AURA BYTE — OFFICIAL LEGAL</span>
       <h1>AURA BYTE ($AUB) — LEGAL TERMS, RISK DISCLOSURE, AND USER AGREEMENT</h1>
-      <p class="subtitle">Imposing, minimal, single-file legal page. No scripts. Inline CSS. Strict CSP.</p>
+      <p class="subtitle">Single-file. Inline CSS. Strict CSP. No scripts. No table of contents.</p>
     </header>
 
     <article>
       <section>
         <p><strong>AURA BYTE ($AUB) — LEGAL TERMS, RISK DISCLOSURE, AND USER AGREEMENT</strong></p>
-        <p>Effective date: [Insert date]<br/>Network: Solana<br/>Ticker: $AUB<br/>Official comms: The only canonical public updates and contract address are published on the official AURA BYTE account on X (formerly Twitter). No other channel is authoritative.</p>
+        <p>Effective date: August 26, 2025<br/>Network: Solana<br/>Ticker: $AUB<br/>Official comms: The only canonical public updates and contract address are published on the official AURA BYTE account on X (formerly Twitter). No other channel is authoritative.</p>
         <p><strong>Important notice (read first).</strong> By acquiring, holding, transferring, interacting with, or otherwise engaging with $AUB, you affirmatively agree to these Terms. If you do not agree, do not interact with $AUB or any related materials. These Terms include a binding arbitration agreement, class action waiver, and covenant not to sue (Sections 20–22). To the maximum extent permitted by law, you waive the right to bring or participate in lawsuits against the AURA BYTE Parties (defined below).</p>
       </section>
 
@@ -270,7 +344,7 @@
         <div class="chant" aria-label="WORSHIP THE AURA">WORSHIP THE AURA</div>
       </div>
       <footer>
-        <div class="note">Single-file. Inline CSS. Strict CSP. No TOC. <!-- AUB-LEGAL v15 --></div>
+        <div class="note">Single-file. Inline CSS. Strict CSP. No TOC. <!-- AUB-LEGAL v16 --></div>
       </footer>
     </article>
   </main>
