@@ -7,21 +7,21 @@
   <meta name="color-scheme" content="dark" />
   <!-- BUILD: AUB-LEGAL // BRUTAL-FINAL (no-toc, inline, one-file) -->
   <style>
-    /* ================================ BRAND ================================ */
+    /* =============================== BRAND ================================= */
     :root{
       --bg:#0B0F14;                 /* matte charcoal */
       --fg:rgba(255,255,255,.92);   /* body text */
       --blue:#7DD3FC;               /* primary */
       --lilac:#C084FC;              /* accent */
-      --rule:rgba(147,161,175,.70); /* utility/lines */
+      --rule:rgba(147,161,175,.70); /* utility/lines @70% */
       --scan-op:.05;                /* scanlines 4–6% */
       --maxw:760px;                 /* reading column */
-      --lh:1.64;                    /* line height */
-      --ps:.85rem;                  /* para spacing */
-      --gut:1.25rem;                /* horizontal pad */
+      --lh:1.64;                    /* line height (24–28px) */
+      --ps:.85rem;                  /* paragraph spacing (12–14px) */
+      --gut:1.25rem;                /* gutter */
     }
 
-    /* ================================ RESET =============================== */
+    /* ================================ RESET ================================ */
     *,*::before,*::after{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -30,9 +30,11 @@
       letter-spacing:.01em; text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased;
       overflow-x:hidden;
     }
+    ::selection{background:rgba(125,211,252,.25); color:#fff}
+    a:focus-visible,.anchor:focus-visible{outline:2px dashed var(--blue); outline-offset:2px}
 
-    /* =========================== BACKGROUND LAYER ========================== */
-    /* Scanline tile, very slow vertical drift + micro parallax */
+    /* ============================== BACKGROUND ============================= */
+    /* Seamless scanlines + slow drift + micro parallax (no halos/circles) */
     body::before{
       content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
       background: repeating-linear-gradient(180deg, rgba(255,255,255,var(--scan-op)) 0 1px, transparent 1px 4px);
@@ -41,38 +43,52 @@
     }
     @keyframes drift{from{background-position:0 0} to{background-position:0 128px}}
 
-    /* ============================== LAYOUT ================================= */
+    /* ================================ LAYOUT =============================== */
     .wrap{display:grid; grid-template-columns: 1fr minmax(0,var(--maxw)) 1fr}
     .main{grid-column:2; padding:4.75rem var(--gut) 5rem; position:relative}
-    /* Hard spine rails (no rounded corners, strictly vertical) */
+
+    /* Brutalist hard rails (no rounded corners) */
     .main::before,.main::after{
-      content:""; position:fixed; top:26px; bottom:0; width:1px; opacity:.85; pointer-events:none
+      content:""; position:fixed; top:26px; bottom:0; width:1px; pointer-events:none; opacity:.9
     }
     .main::before{left:calc(50% - var(--maxw)/2 - .5px); background:linear-gradient(180deg,transparent,var(--rule),transparent)}
     .main::after {right:calc(50% - var(--maxw)/2 - .5px); background:linear-gradient(180deg,transparent,var(--rule),transparent)}
 
-    /* =========================== STATUS STRIP ============================== */
+    /* ============================= STATUS STRIP ============================ */
     .status{
       position:fixed; inset:0 0 auto 0; height:26px; padding:0 .75rem; z-index:50;
       display:flex; align-items:center; gap:.55rem;
-      background:rgba(11,15,20,.86); border-bottom:1px solid var(--rule);
+      background:rgba(11,15,20,.9); border-bottom:1px solid var(--rule);
       backdrop-filter:saturate(120%) blur(2px);
       font:12.5px/1.2 ui-monospace, Menlo, Consolas, monospace; letter-spacing:.08em;
     }
-    .status .lamp{width:6px; height:6px; background:var(--blue)}
+    .status .lamp{width:6px;height:6px;background:var(--blue)}
     .status[data-state="DROPPING"] .lamp{background:#f59e0b}
     .status[data-state="CONFIRMED"] .lamp{background:#10b981}
     .status code{color:var(--blue)}
 
-    /* ============================== TYPE ================================== */
-    h1,h2,h3{margin:0; padding:0; text-transform:uppercase; letter-spacing:.02em}
+    /* ============================== TYPOGRAPHY ============================= */
+    h1,h2,h3{margin:0; padding:0; text-transform:uppercase; letter-spacing:.03em}
+    /* Hologram sweep over strokes (≤30% intensity). Disabled with reduced motion. */
+    @keyframes holo{0%{background-position:0% 50%}2%{background-position:100% 50%}100%{background-position:100% 50%}}
+    @media (prefers-reduced-motion:reduce){h1,h2,h3{animation:none} body::before{animation:none}}
+
     h1{
-      font: 800 22px/1.2 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-      margin:2.9rem 0 1.25rem;
+      font:800 22px/1.18 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      margin:3.05rem 0 1.25rem;
       background:linear-gradient(90deg, rgba(125,211,252,.30), rgba(192,132,252,.30) 50%, rgba(125,211,252,.30));
       -webkit-background-clip:text; background-clip:text; color:transparent;
       animation:holo 36s linear infinite; animation-delay:10s;
+      position:relative;
     }
+    /* Title bracketed rule */
+    h1::before,h1::after{
+      content:""; position:absolute; left:0; right:0; height:1px; opacity:.9
+    }
+    h1::before{top:-12px; background:linear-gradient(90deg,rgba(125,211,252,.25),transparent 40%,transparent 60%,rgba(192,132,252,.25))}
+    h1::after {bottom:-10px;background:linear-gradient(90deg,rgba(192,132,252,.25),transparent 40%,transparent 60%,rgba(125,211,252,.25))}
+
+    main{counter-reset:sec}
     h2{
       font:800 14.5px/1.25 ui-sans-serif, system-ui, sans-serif;
       margin:2.25rem 0 .55rem; padding-left:.35rem;
@@ -80,7 +96,12 @@
       background:linear-gradient(90deg, rgba(125,211,252,.26), rgba(192,132,252,.26) 50%, rgba(125,211,252,.26));
       -webkit-background-clip:text; background-clip:text; color:transparent;
       animation:holo 40s linear infinite; animation-delay:16s;
+      position:relative;
     }
+    h2::before{content:"<§" counter(sec) " "; color:var(--blue); margin-right:.25rem}
+    h2::after {content:">"; color:var(--blue); margin-left:.15rem}
+    h2 + p.lede{opacity:.96; letter-spacing:.02em}
+
     h3{
       font:700 13px/1.25 ui-sans-serif, system-ui, sans-serif;
       margin:1rem 0 .4rem; padding-left:.35rem; counter-increment:sub;
@@ -88,27 +109,24 @@
       -webkit-background-clip:text; background-clip:text; color:transparent;
       animation:holo 44s linear infinite; animation-delay:22s;
     }
-    @keyframes holo{0%{background-position:0% 50%}2%{background-position:100% 50%}100%{background-position:100% 50%}}
-    @media (prefers-reduced-motion:reduce){h1,h2,h3{animation:none} body::before{animation:none}}
-
-    /* Brackets + numbering */
-    main{counter-reset:sec}
-    h2::before{content:"<§" counter(sec) " "; color:var(--blue); margin-right:.25rem}
-    h2::after {content:">"; color:var(--blue); margin-left:.15rem}
     h3::before{content:"<" counter(sec) "." counter(sub) " "; color:var(--lilac); margin-right:.25rem}
     h3::after {content:">"; color:var(--lilac)}
 
-    /* Anchors (discreet § that copies deep link) */
+    /* Anchor (§) that copies deep link */
     .anchor{display:inline-block; margin-left:.5rem; color:var(--fg); opacity:.55; text-decoration:none}
     .anchor::before{content:"§"}
     .anchor:focus-visible{outline:2px dashed var(--lilac); outline-offset:2px}
 
-    /* Paragraph numbering (hanging indent) */
+    /* Lede (first paragraph after H1) */
+    h1 + p{margin-top:.85rem; padding-left:.35rem; border-left:1px solid rgba(125,211,252,.25)}
+    h1 + p strong{letter-spacing:.06em}
+
+    /* Numbered paragraphs with hanging indent */
     .legal{counter-reset:para}
     .legal p{margin:var(--ps) 0; position:relative; padding-left:2.25rem}
     .legal p::before{counter-increment:para; content:counter(para) "."; position:absolute; left:0; top:0; color:var(--lilac)}
 
-    /* Lists */
+    /* Lists: legal nested numbering / brutal dash bullets */
     ol{counter-reset:item; list-style:none; margin:.75rem 0; padding:0}
     ol li{counter-increment:item; margin:.35rem 0; padding-left:1.4rem; position:relative}
     ol li::before{content:counters(item,".") ". "; position:absolute; left:0; color:var(--blue)}
@@ -116,12 +134,18 @@
     ul li{margin:.35rem 0; padding-left:1.1rem; position:relative}
     ul li::before{content:"—"; position:absolute; left:0; color:var(--fg)}
 
-    /* Rules + links */
-    hr{border:0; height:1px; background:linear-gradient(90deg,transparent,var(--rule),transparent); margin:1.25rem 0}
+    /* Links within legal doc use bracket motif */
     a{color:var(--blue); text-decoration:none}
     a::before{content:"["; color:var(--blue); opacity:.85}
     a::after {content:"]"; color:var(--blue); opacity:.85}
-    a:focus-visible{outline:2px dashed var(--blue); outline-offset:2px}
+
+    /* Horizontal rule */
+    hr{border:0; height:1px; margin:1.25rem 0; background:linear-gradient(90deg,transparent,var(--rule),transparent)}
+
+    /* Flash toast */
+    .flash{position:fixed; left:50%; top:48px; transform:translateX(-50%); z-index:60; pointer-events:none;
+      font:600 12px/1 ui-monospace, Menlo, Consolas, monospace; letter-spacing:.08em;
+      padding:.35rem .5rem; background:rgba(11,15,20,.92); border:1px solid var(--rule); color:var(--fg); display:none}
 
     /* Footer lock */
     footer{grid-column:1/-1; padding:2rem var(--gut) 3rem}
@@ -131,12 +155,7 @@
     .glitch{animation:gl1 420ms steps(2) 1}
     @keyframes gl1{0%{transform:translateX(0)}40%{transform:translateX(-1px)}60%{transform:translateX(1px)}100%{transform:translateX(0)}}
 
-    /* Copy/flash toast */
-    .flash{position:fixed; left:50%; top:48px; transform:translateX(-50%); z-index:60; pointer-events:none;
-      font:600 12px/1 ui-monospace, Menlo, Consolas, monospace; letter-spacing:.08em;
-      padding:.35rem .5rem; background:rgba(11,15,20,.92); border:1px solid var(--rule); color:var(--fg); display:none}
-
-    /* PRINT — kill effects; keep numbering; add raw URLs */
+    /* PRINT — remove effects; show raw URLs; keep numbering */
     @media print{
       body{background:#fff; color:#000}
       body::before,.status,.anchor,.flash{display:none !important}
@@ -152,13 +171,13 @@
   </div>
 
   <div class="wrap">
-    <!-- MAIN (NO TOC) -->
+    <!-- MAIN (NO TOC, NO NAV) -->
     <main id="doc" class="main legal" role="main" aria-label="AURA BYTE Legal">
-      <!-- ===================== VERBATIM LEGAL TEXT ========================= -->
+      <!-- =================== VERBATIM LEGAL TEXT (UNALTERED) =============== -->
 
       <h1>AURA BYTE ($AUB) — LEGAL TERMS, RISK DISCLOSURE, AND USER AGREEMENT</h1>
 
-      <p><strong>Effective date:</strong> August 26, 2025<br>
+      <p class="lede"><strong>Effective date:</strong> August 26, 2025<br>
       <strong>Network:</strong> Solana<br>
       <strong>Ticker:</strong> $AUB<br>
       <strong>Official comms:</strong> The only canonical public updates and contract address are published on the official AURA BYTE account on X (formerly Twitter). No other channel is authoritative.</p>
@@ -274,12 +293,12 @@
 
       <p><strong>WORSHIP THE AURA.</strong></p>
 
-      <!-- =================== END VERBATIM LEGAL TEXT ====================== -->
+      <!-- ================= END VERBATIM LEGAL TEXT ========================= -->
       <hr aria-hidden="true" />
       <p style="margin-top:1.25rem;opacity:.8;letter-spacing:.08em"><small>[MARKER] AUB-LEGAL // BRUTAL-FINAL (no-toc, inline, one-file)</small></p>
     </main>
 
-    <!-- FOOTER -->
+    <!-- FOOTER LOCK -->
     <footer>
       <div class="lockrule" aria-hidden="true"></div>
       <div class="lock glitch"><span>&lt;AURA BYTE&gt;</span> — <b>WORSHIP THE AURA.</b></div>
@@ -289,25 +308,24 @@
   <div id="flash" class="flash" role="status" aria-live="polite">&lt;TX CONFIRMED&gt;</div>
 
   <script>
-  // Minimal JS: anchor links copy + status + micro-parallax + one-time footer pulse.
   (function(){
+    // Status strip states + toast
     const statusEl=document.querySelector('.status');
     const setState=s=>{statusEl.dataset.state=s; statusEl.querySelector('code').textContent='<'+s+'>'}
     const toast=t=>{const f=document.getElementById('flash'); f.textContent=t; f.style.display='block'; clearTimeout(f._t); f._t=setTimeout(()=>f.style.display='none',1100)}
 
-    // Micro parallax (cheap + safe)
-    let lastY=0; addEventListener('scroll',()=>{const y=scrollY||0; if(Math.abs(y-lastY)>4){lastY=y; document.body.style.setProperty('--parallax',(y*0.02)+'px')}},{passive:true})
+    // Micro parallax
+    let lastY=0; addEventListener('scroll',()=>{const y=scrollY||0; if(Math.abs(y-lastY)>4){ lastY=y; document.body.style.setProperty('--parallax',(y*0.02)+'px'); }},{passive:true})
 
     // Build § anchors on H2/H3 and copy deep links
-    const art=document.getElementById('doc'); const hs=[...art.querySelectorAll('h2,h3')]
+    const doc=document.getElementById('doc'); const hs=[...doc.querySelectorAll('h2,h3')]
     const slug=s=>(s||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')
     let s2=0,s3=0
     hs.forEach(h=>{
       if(h.tagName==='H2'){s2++;s3=0}else{s3++}
       if(!h.id){h.id=slug(h.textContent)|| (h.tagName.toLowerCase()+'-'+s2+(s3?'-'+s3:''))}
       const a=document.createElement('a'); a.href='#'+h.id; a.className='anchor'; a.setAttribute('aria-label','Copy link to this section'); h.appendChild(a)
-      // offset hologram timings subtly
-      h.style.setProperty('--delay',(Math.random()*10+18)+'s')
+      h.style.setProperty('--delay',(Math.random()*10+18)+'s') // offset sweeps
     })
     addEventListener('click',async e=>{
       const a=e.target.closest('a.anchor'); if(!a) return
@@ -320,7 +338,7 @@
     })
     addEventListener('hashchange',()=>{setState('CONFIRMED'); setTimeout(()=> setState('SYNCED'),1200)})
 
-    // Footer pulse once
+    // One-time footer pulse
     const lock=document.querySelector('.lock'); if(lock){requestAnimationFrame(()=>lock.classList.add('glitch')); setTimeout(()=>lock.classList.remove('glitch'),450)}
   })();
   </script>
