@@ -5,7 +5,7 @@
   <title>AURA BYTE ($AUB) — LEGAL TERMS</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark light" />
-  <!-- BUILD: AUB-LEGAL v21 (final-inline, no-rewrites, NO TOC) -->
+  <!-- BUILD: AUB-LEGAL v22 (final-inline, no-rewrites, NO TOC) -->
   <style>
     /* === RESET === */
     *,*::before,*::after{box-sizing:border-box}
@@ -22,7 +22,7 @@
       --a1:#59e6ff; --a2:#c6a7ff
     }
 
-    /* === BACKGROUND DEPTH (elegant vignettes + faint grid) === */
+    /* === BACKGROUND DEPTH (subtle vignettes + faint grid) === */
     body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none}
     body::before{
       z-index:-2;
@@ -48,18 +48,18 @@
     p{margin:.85rem 0}
     hr{border:0;height:1px;background:linear-gradient(90deg,transparent,var(--rule),transparent);margin:2.2rem 0}
 
-    /* === BANNER: SINGLE GRADIENT TEXT ANIMATION === */
+    /* === BANNER: SINGLE GRADIENT TEXT ANIMATION (prefers-reduced-motion respected) === */
     .banner{display:flex;align-items:center;justify-content:center;margin:5rem 0 1rem}
     .chant{
       font-weight:1000;letter-spacing:.08em;
       font-size:clamp(1.1rem,.9rem + 2vw,2rem);line-height:1.2;text-align:center;
       background:linear-gradient(90deg,var(--a1),var(--a2),var(--a1));background-size:200% 100%;
       -webkit-background-clip:text;background-clip:text;color:transparent;
-      animation:aura 5.45s linear infinite;will-change:background-position
+      animation:aura 5.5s linear infinite;will-change:background-position
     }
     @keyframes aura{from{background-position:0% 50%}to{background-position:200% 50%}}
 
-    /* === LINKS (rare) === */
+    /* === LINKS === */
     a{color:inherit;text-decoration:underline dotted;text-underline-offset:.19em}
     a:hover{text-decoration-style:solid}
 
