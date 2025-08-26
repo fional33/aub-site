@@ -17,9 +17,7 @@
   "redirects": [
     {
       "source": "/(.*)",
-      "has": [
-        { "type": "host", "value": "www.aurabytecoin.net" }
-      ],
+      "has": [{ "type": "host", "value": "www.aurabytecoin.net" }],
       "destination": "https://aurabytecoin.net/$1",
       "permanent": true
     }

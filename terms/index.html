@@ -5,130 +5,81 @@
   <title>AURA BYTE ($AUB) — LEGAL TERMS</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark light" />
-  <!-- BUILD: AUB-LEGAL v15 (inline-css, no-rewrites) -->
+  <!-- BUILD: AUB-LEGAL v16 (apex, kill-legacy, inline-css, no-rewrites) -->
   <style>
-    /* Minimal reset */
-    *, *::before, *::after { box-sizing: border-box; }
-    html { color-scheme: dark; -webkit-text-size-adjust: 100%; }
-    body {
-      margin: 0;
+    /* === RESET === */
+    *,*::before,*::after{box-sizing:border-box}
+    html{color-scheme:dark;-webkit-text-size-adjust:100%}
+    body{
+      margin:0;
       font-family: Charter, Georgia, "Times New Roman", ui-serif, serif;
-      line-height: 1.65;
-      letter-spacing: 0;
-      background: #0b0f14;
-      color: #e8ebef;
-      text-rendering: optimizeLegibility;
-      -webkit-font-smoothing: antialiased;
+      line-height:1.7;
+      background:#0b0f14; color:#e8ebef;
+      text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased
+    }
+    :root{
+      --bg:#0b0f14; --fg:#e8ebef; --muted:#9aa3ad; --rule:#ffffff33;
+      --a1:#59e6ff; --a2:#c6a7ff
     }
 
-    :root {
-      --bg: #0b0f14;
-      --fg: #e8ebef;
-      --muted: #9aa3ad;
-      --rule: #ffffff30;
-      --accent1: #59e6ff;
-      --accent2: #c6a7ff;
-    }
-
-    /* Subtle depth: vignettes + faint grid */
-    body::before, body::after {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-    }
-    body::before {
-      z-index: -2;
+    /* === BACKGROUND DEPTH (SUBTLE, NON-ANIMATED) === */
+    body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none}
+    body::before{
+      z-index:-2;
       background:
-        radial-gradient(60vw 60vw at 15% 8%, #59e6ff10 0%, transparent 60%),
-        radial-gradient(60vw 60vw at 85% 0%, #c6a7ff12 0%, transparent 60%),
-        radial-gradient(80vw 80vw at 50% 120%, #59e6ff08 0%, transparent 60%);
+        radial-gradient(60vw 60vw at 12% 6%, #59e6ff10 0%, transparent 60%),
+        radial-gradient(60vw 60vw at 88% 0%, #c6a7ff12 0%, transparent 60%),
+        radial-gradient(85vw 85vw at 50% 120%, #59e6ff08 0%, transparent 65%);
     }
-    body::after {
-      z-index: -3;
+    body::after{
+      z-index:-3;
       background:
         repeating-linear-gradient(0deg, #ffffff08 0, #ffffff08 1px, transparent 1px, transparent 28px),
         repeating-linear-gradient(90deg, #ffffff08 0, #ffffff08 1px, transparent 1px, transparent 28px);
-      opacity: .22;
+      opacity:.22;
     }
 
-    /* Layout */
-    main { max-width: 72ch; margin: 0 auto; padding: 6rem 1.25rem 5rem; }
-    header { margin-bottom: 1.5rem; }
-    .kicker {
-      letter-spacing: .18em;
-      font-size: .85rem;
-      color: var(--muted);
-      text-transform: none; /* small-caps vibe via tracking only */
-      display: block;
+    /* === LAYOUT === */
+    main{max-width:72ch;margin:0 auto;padding:6rem 1.25rem 5rem}
+    header{margin-bottom:1.25rem}
+    .kicker{letter-spacing:.18em;font-size:.85rem;color:var(--muted);display:block}
+    .title{font-weight:800;font-size:clamp(1.6rem,1.1rem + 1.7vw,2.5rem);letter-spacing:.03em;margin:.5rem 0 0;line-height:1.15}
+    h2{font-weight:900;font-size:1.05rem;letter-spacing:.03em;margin:2.25rem 0 .75rem;color:var(--fg)}
+    p{margin:.85rem 0}
+    .muted{color:var(--muted)}
+    hr{border:0;height:1px;background:linear-gradient(90deg,transparent,var(--rule),transparent);margin:2.2rem 0}
+
+    /* === BANNER: SINGLE ANIMATION (GRADIENT TEXT) === */
+    .banner{display:flex;align-items:center;justify-content:center;margin:5rem 0 1rem}
+    .chant{
+      font-weight:1000;letter-spacing:.08em;
+      font-size:clamp(1.1rem,.9rem + 2vw,2rem);line-height:1.2;text-align:center;
+      background:linear-gradient(90deg,var(--a1),var(--a2),var(--a1));background-size:200% 100%;
+      -webkit-background-clip:text;background-clip:text;color:transparent;
+      animation:aura 5.1s linear infinite;will-change:background-position
     }
-    .title {
-      font-weight: 800;
-      font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
-      letter-spacing: .03em;
-      margin: .5rem 0 0;
-      line-height: 1.2;
+    @keyframes aura{from{background-position:0% 50%}to{background-position:200% 50%}}
+
+    /* === LINKS (RARE) === */
+    a{color:inherit;text-decoration:underline dotted;text-underline-offset:.19em}
+    a:hover{text-decoration-style:solid}
+
+    /* === PRINT === */
+    @media print{
+      html{color-scheme:light}
+      body{background:#fff;color:#000}
+      body::before,body::after{display:none}
+      .chant{color:#000;-webkit-text-fill-color:initial;background:none;animation:none}
+      hr{background:#000;opacity:.25}
+      a{color:#000;text-decoration:underline}
     }
 
-    h2 {
-      font-weight: 800;
-      font-size: 1.05rem;
-      letter-spacing: .03em;
-      margin: 2.25rem 0 .75rem;
-      color: var(--fg);
-    }
-    p { margin: .8rem 0; }
-    .muted { color: var(--muted); }
-
-    hr {
-      border: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--rule), transparent);
-      margin: 2.5rem 0;
-    }
-
-    /* Footer chant banner */
-    .banner { display: flex; align-items: center; justify-content: center; margin: 5rem 0 1rem; }
-    .chant {
-      font-weight: 900;
-      letter-spacing: .08em;
-      font-size: clamp(1.1rem, .9rem + 2vw, 2rem);
-      line-height: 1.2;
-      background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent1));
-      background-size: 200% 100%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      animation: aura 5.2s linear infinite;
-      will-change: background-position;
-      text-align: center;
-    }
-    @keyframes aura {
-      from { background-position: 0% 50%; }
-      to   { background-position: 200% 50%; }
-    }
-
-    /* Links (rare on this page) */
-    a { color: inherit; text-decoration: underline dotted; text-underline-offset: .2em; }
-    a:hover { text-decoration-style: solid; }
-
-    /* Print: plain, authoritative */
-    @media print {
-      html { color-scheme: light; }
-      body { background: #fff; color: #000; }
-      body::before, body::after { display: none; }
-      .banner .chant { color: #000; -webkit-text-fill-color: initial; background: none; animation: none; }
-      hr { background: #000; opacity: .2; }
-      a { color: #000; text-decoration: underline; }
-    }
-
-    /* Reduce motion */
-    @media (prefers-reduced-motion: reduce) {
-      .chant { animation: none; }
-    }
+    /* === REDUCE MOTION === */
+    @media (prefers-reduced-motion:reduce){.chant{animation:none}}
   </style>
 </head>
 <body>
+  <!-- NO TOC. STRICT LONGFORM. -->
   <main role="main">
     <header>
       <span class="kicker">AURA BYTE</span>
@@ -137,7 +88,7 @@
     </header>
 
     <article aria-label="AURA BYTE Legal Terms">
-      <p><strong>Effective date:</strong> [Insert date]<br>
+      <p><strong>Effective date:</strong> August 26, 2025<br>
       <strong>Network:</strong> Solana<br>
       <strong>Ticker:</strong> $AUB<br>
       <strong>Official comms:</strong> The only canonical public updates and contract address are published on the official AURA BYTE account on X (formerly Twitter). No other channel is authoritative.</p>
