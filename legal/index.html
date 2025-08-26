@@ -11,12 +11,12 @@
 :root{
   --bg:#0B0F14;              /* matte charcoal */
   --fg:rgba(255,255,255,.94);/* body */
-  --blue:#7DD3FC;            /* primary */
-  --lilac:#C084FC;           /* accent */
+  --blue:#59E6FF;            /* primary */
+  --lilac:#B388FF;           /* accent */
   --rule:rgba(147,161,175,.70);
-  --scan:.065;               /* ~6.5% scanlines */
-  --maxw:760px;
-  --lh:1.68;                 /* ~26-27px @ 16px */
+  --scan:0.075;               /* ~6.5% scanlines */
+  --maxw:720px;
+  --lh:1.60;                 /* ~26-27px @ 16px */
   --ps:.9rem;                /* para spacing */
   --gut:1.4rem;              /* column side pad */
 }
@@ -43,8 +43,8 @@ body::before{
 body::after{
   content:""; position:fixed; inset:0; z-index:-4; pointer-events:none;
   background:
-    repeating-linear-gradient(45deg, rgba(125,211,252,.028) 0 2px, transparent 2px 6px),
-    radial-gradient(1200px 800px at 50% 28%, rgba(192,132,252,.05), transparent 60%);
+    repeating-linear-gradient(45deg, rgba(125,211,252,0.54) 0 2px, transparent 2px 6px),
+    radial-gradient(1200px 800px at 50% 28%, rgba(192,132,252,0.54), transparent 60%);
   mix-blend-mode:screen;
 }
 @keyframes drift{from{background-position:0 0}to{background-position:0 128px}}
@@ -55,19 +55,19 @@ body::after{
 
 /* Neon side rails + inner stroke (no rounded corners) */
 .frame-rails::before,.frame-rails::after{
-  content:""; position:fixed; top:26px; bottom:0; width:2px; z-index:-1; pointer-events:none; opacity:.95;
+  content:""; position:fixed; top:26px; bottom:0; width:2px; z-index:-1; pointer-events:none; opacity:.98;
 }
 .frame-rails::before{
   left:calc(50% - var(--maxw)/2 - 1px);
   background:
-    linear-gradient(180deg, rgba(125,211,252,.0) 0%, rgba(125,211,252,.65) 40%, rgba(192,132,252,.65) 60%, rgba(192,132,252,.0) 100%);
-  filter: drop-shadow(0 0 8px rgba(125,211,252,.25));
+    linear-gradient(180deg, rgba(125,211,252,0.54) 0%, rgba(125,211,252,0.54) 40%, rgba(192,132,252,0.54) 60%, rgba(192,132,252,0.54) 100%);
+  filter: drop-shadow(0 0 8px rgba(125,211,252,0.54));
 }
 .frame-rails::after{
   right:calc(50% - var(--maxw)/2 - 1px);
   background:
-    linear-gradient(180deg, rgba(192,132,252,.0) 0%, rgba(192,132,252,.65) 40%, rgba(125,211,252,.65) 60%, rgba(125,211,252,.0) 100%);
-  filter: drop-shadow(0 0 8px rgba(192,132,252,.22));
+    linear-gradient(180deg, rgba(192,132,252,0.54) 0%, rgba(192,132,252,0.54) 40%, rgba(125,211,252,0.54) 60%, rgba(125,211,252,0.54) 100%);
+  filter: drop-shadow(0 0 8px rgba(192,132,252,0.54));
 }
 
 /* Top status strip */
@@ -88,23 +88,23 @@ h1,h2,h3{margin:0; padding:0; text-transform:uppercase}
 h1{
   font:900 24px/1.18 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
   letter-spacing:.04em; margin:3.2rem 0 1.4rem;
-  color:transparent; background:linear-gradient(90deg,rgba(125,211,252,.48),rgba(192,132,252,.48) 50%,rgba(125,211,252,.48));
+  color:transparent; background:linear-gradient(90deg,rgba(125,211,252,0.54),rgba(192,132,252,0.54) 50%,rgba(125,211,252,0.54));
   -webkit-background-clip:text; background-clip:text; animation:holo 38s linear infinite; text-shadow:
     0 0 0 rgba(0,0,0,0),
-    1px 0 rgba(125,211,252,.25),
-    -1px 0 rgba(192,132,252,.25);
+    1px 0 rgba(125,211,252,0.54),
+    -1px 0 rgba(192,132,252,0.54);
 }
 h2{
   font:800 15px/1.25 ui-sans-serif,system-ui,sans-serif;
   letter-spacing:.03em; margin:2.35rem 0 .65rem; padding-left:.4rem;
   counter-increment:sec; counter-reset:sub;
-  color:transparent; background:linear-gradient(90deg,rgba(125,211,252,.4),rgba(192,132,252,.4) 50%,rgba(125,211,252,.4));
+  color:transparent; background:linear-gradient(90deg,rgba(125,211,252,0.54),rgba(192,132,252,0.54) 50%,rgba(125,211,252,0.54));
   -webkit-background-clip:text; background-clip:text; animation:holo 42s linear infinite;
 }
 h3{
   font:700 13px/1.25 ui-sans-serif,system-ui,sans-serif;
   letter-spacing:.02em; margin:1.05rem 0 .45rem; padding-left:.4rem; counter-increment:sub;
-  color:transparent; background:linear-gradient(90deg,rgba(192,132,252,.42),rgba(125,211,252,.42) 60%,rgba(192,132,252,.42));
+  color:transparent; background:linear-gradient(90deg,rgba(192,132,252,0.54),rgba(125,211,252,0.54) 60%,rgba(192,132,252,0.54));
   -webkit-background-clip:text; background-clip:text; animation:holo 46s linear infinite;
 }
 @keyframes holo{0%{background-position:0% 50%}2%{background-position:100% 50%}100%{background-position:100% 50%}}
@@ -150,7 +150,7 @@ hr{border:0; height:1px; background:linear-gradient(90deg,transparent,var(--rule
 
 /* Footer lock */
 footer{grid-column:1/-1; padding:2rem var(--gut) 3rem}
-.lockrule{height:1px; background:rgba(125,211,252,.22); margin:0 0 1rem}
+.lockrule{height:1px; background:rgba(125,211,252,0.54); margin:0 0 1rem}
 .lock{font:800 12.5px/1 ui-sans-serif,system-ui,sans-serif; letter-spacing:.24em; text-align:center}
 .lock span,.lock b{color:var(--fg)} .lock b{color:var(--blue)}
 .glitch{animation:gl1 440ms steps(2) 1}
@@ -166,6 +166,47 @@ footer{grid-column:1/-1; padding:2rem var(--gut) 3rem}
 /* High contrast preference */
 @media (prefers-contrast:more){ .status{border-bottom-color:#e5e7eb} .anchor:focus-visible{outline-color:#fff} }
 </style>
+/* === BRUTAL EXTRA — MAX PUNCH (inline) === */
+:root{--fg:rgba(255,255,255,.98);--scan:0.085;--maxw:720px;--lh:1.58}
+h1{font-size:30px;letter-spacing:.06em;animation-duration:34s!important}
+h2{animation-duration:38s!important}
+h3{animation-duration:40s!important}
+h1,h2,h3{-webkit-text-stroke:.4px rgba(255,255,255,.12)}
+.frame-rails::before,.frame-rails::after{opacity:1!important;filter:drop-shadow(0 0 12px rgba(89,230,255,.24)) drop-shadow(0 0 14px rgba(179,136,255,.22))}
+body::before{animation-duration:20s!important}
+body::after{background:repeating-linear-gradient(45deg,rgba(89,230,255,.035) 0 2px,transparent 2px 6px),radial-gradient(1200px 800px at 50% 26%,rgba(179,136,255,.055),transparent 60%)}
+.anchor{opacity:.9}.anchor:hover{opacity:1}
+.status{letter-spacing:.14em}
+footer .lock{letter-spacing:.28em}
+@media (prefers-reduced-motion:reduce){h1,h2,h3{-webkit-text-stroke:.35px rgba(255,255,255,.12)} body::before{animation:none!important}}
+/* === AURA BYTE // BRUTAL POLISH OVERRIDES (inline) === */
+:root{--fg:rgba(255,255,255,.96);--scan:0.078;--maxw:720px;--lh:1.60}
+h1{font-size:28px;letter-spacing:.05em;text-shadow:0 0 0 rgba(0,0,0,0),1px 0 rgba(89,230,255,.35),-1px 0 rgba(179,136,255,.28)}
+h2{font-size:15.5px;letter-spacing:.035em}
+h3{font-size:13.5px;letter-spacing:.025em}
+body::before{animation-duration:22s!important}
+.frame-rails::before,.frame-rails::after{opacity:.98!important;filter:drop-shadow(0 0 10px rgba(89,230,255,.18)) drop-shadow(0 0 10px rgba(179,136,255,.16))}
+.anchor{opacity:.78}.anchor:hover{opacity:1}
+.status{letter-spacing:.12em}
+footer .lock{letter-spacing:.26em}
+@media (prefers-reduced-motion:reduce){body::before{animation:none!important}}
+
+<style id="aub-final-overrides">
+/* === AURA BYTE // FINAL OVERRIDES (last-wins; no text changes) === */
+:root{--fg:rgba(255,255,255,.99);--scan:0.095;--maxw:720px;--lh:1.54
+h1{font-size:33px;letter-spacing:.065em;-webkit-text-stroke:.55px rgba(255,255,255,.12);animation-duration:28s!important}
+h2{letter-spacing:.040em;-webkit-text-stroke:.55px rgba(255,255,255,.10);animation-duration:32s!important}
+h3{letter-spacing:.030em;-webkit-text-stroke:.55px rgba(255,255,255,.10);animation-duration:36s!important}
+.frame-rails::before,.frame-rails::after{
+  opacity:1!important;
+  filter:drop-shadow(0 0 16px rgba(89,230,255,.26)) drop-shadow(0 0 18px rgba(179,136,255,.24))
+}
+body::before{animation-duration:18s!important}
+.anchor{opacity:1}
+footer .lock{letter-spacing:.30em}
+@media (prefers-reduced-motion:reduce){h1,h2,h3{-webkit-text-stroke:.55px rgba(255,255,255,.12);animation-duration:36s!important} body::before{animation-duration:18s!important}}
+</style>
+
 </head>
 <body>
   <!-- STATUS -->
@@ -346,3 +387,4 @@ footer{grid-column:1/-1; padding:2rem var(--gut) 3rem}
 </script>
 </body>
 </html>
+

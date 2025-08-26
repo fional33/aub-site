@@ -24,9 +24,9 @@
     body::before{
       z-index:-2;
       background:
-        radial-gradient(60vw 60vw at 12% 6%, #59e6ff14 0%, transparent 60%),
-        radial-gradient(60vw 60vw at 88% 0%, #c6a7ff16 0%, transparent 60%),
-        radial-gradient(85vw 85vw at 50% 120%, #59e6ff0a 0%, transparent 65%);
+        radial-gradient(60vw 60vw at 12% 6%, #59e6ff16 0%, transparent 60%),
+        radial-gradient(60vw 60vw at 88% 0%, #c6a7ff18 0%, transparent 60%),
+        radial-gradient(85vw 85vw at 50% 120%, #59e6ff0c 0%, transparent 65%);
     }
     body::after{
       z-index:-3;
@@ -40,7 +40,7 @@
     main{max-width:72ch;margin:0 auto;padding:6rem 1.25rem 5rem}
     header{margin-bottom:1.25rem}
     .kicker{letter-spacing:.18em;font-size:.85rem;color:var(--muted);display:block}
-    .title{font-weight:800;font-size:clamp(1.6rem,1.1rem + 1.7vw,2.5rem);letter-spacing:.03em;margin:.5rem 0 0;line-height:1.15}
+    .title{font-weight:800;font-size:clamp(1.6rem,1.1rem + 1.7vw,2.5rem);letter-spacing:.03em;margin:.5rem 0 0;line-height:1.15 letter-spacing:.035em;margin:.35rem 0 0}
     h2{font-weight:900;font-size:1.05rem;letter-spacing:.03em;margin:2.25rem 0 .75rem;color:var(--fg)}
     p{margin:.85rem 0}
     hr{border:0;height:1px;background:linear-gradient(90deg,transparent,var(--rule),transparent);margin:2.2rem 0}
@@ -52,7 +52,7 @@
       font-size:clamp(1.1rem,.9rem + 2vw,2rem);line-height:1.2;text-align:center;
       background:linear-gradient(90deg,var(--a1),var(--a2),var(--a1));background-size:200% 100%;
       -webkit-background-clip:text;background-clip:text;color:transparent;
-      animation:aura 5.5s linear infinite;will-change:background-position
+      animation:aura 4.8s linear infinite;will-change:background-position
     }
     @keyframes aura{from{background-position:0% 50%}to{background-position:200% 50%}}
 
