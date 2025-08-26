@@ -41,6 +41,10 @@
       background-size:100% 128px; animation:drift 18s linear infinite;
       transform: translate3d(0, var(--parallax,0px), 0);
     }
+    body::after{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+      background:repeating-linear-gradient(45deg,rgba(125,211,252,.024) 0 2px, transparent 2px 6px),
+                 radial-gradient(1200px 800px at 50% 30%, rgba(192,132,252,.045), transparent 60%);
+      mix-blend-mode:screen}
     @keyframes drift{from{background-position:0 0} to{background-position:0 128px}}
 
     /* ================================ LAYOUT =============================== */
@@ -76,7 +80,7 @@
     h1{
       font:800 22px/1.18 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
       margin:3.05rem 0 1.25rem;
-      background:linear-gradient(90deg, rgba(125,211,252,.30), rgba(192,132,252,.30) 50%, rgba(125,211,252,.30));
+      background:linear-gradient(90deg, rgba(125,211,252,.45), rgba(192,132,252,.45) 50%, rgba(125,211,252,.45));
       -webkit-background-clip:text; background-clip:text; color:transparent;
       animation:holo 36s linear infinite; animation-delay:10s;
       position:relative;
@@ -93,7 +97,7 @@
       font:800 14.5px/1.25 ui-sans-serif, system-ui, sans-serif;
       margin:2.25rem 0 .55rem; padding-left:.35rem;
       counter-increment:sec; counter-reset:sub;
-      background:linear-gradient(90deg, rgba(125,211,252,.26), rgba(192,132,252,.26) 50%, rgba(125,211,252,.26));
+      background:linear-gradient(90deg, rgba(125,211,252,.38), rgba(192,132,252,.38) 50%, rgba(125,211,252,.38));
       -webkit-background-clip:text; background-clip:text; color:transparent;
       animation:holo 40s linear infinite; animation-delay:16s;
       position:relative;
@@ -105,7 +109,7 @@
     h3{
       font:700 13px/1.25 ui-sans-serif, system-ui, sans-serif;
       margin:1rem 0 .4rem; padding-left:.35rem; counter-increment:sub;
-      background:linear-gradient(90deg, rgba(192,132,252,.28), rgba(125,211,252,.28) 60%, rgba(192,132,252,.28));
+      background:linear-gradient(90deg, rgba(192,132,252,.40), rgba(125,211,252,.40) 60%, rgba(192,132,252,.40));
       -webkit-background-clip:text; background-clip:text; color:transparent;
       animation:holo 44s linear infinite; animation-delay:22s;
     }
@@ -136,8 +140,8 @@
 
     /* Links within legal doc use bracket motif */
     a{color:var(--blue); text-decoration:none}
-    a::before{content:"["; color:var(--blue); opacity:.85}
-    a::after {content:"]"; color:var(--blue); opacity:.85}
+    a::before{content:"["; color:var(--blue); opacity:.98}
+    a::after {content:"]"; color:var(--blue); opacity:.98}
 
     /* Horizontal rule */
     hr{border:0; height:1px; margin:1.25rem 0; background:linear-gradient(90deg,transparent,var(--rule),transparent)}
