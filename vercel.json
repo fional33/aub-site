@@ -18,7 +18,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://platform.twitter.comhttps://cdn.syndication.twimg.comstyle-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://.twimg.com https://pbs.twimg.comconnect-src 'self' https://api.twitter.comttps://syndicationtwitter.comhttps://cdn.syndication.twimg.comhttps://.twimg.com; frame-src https://platform.twitter.comfont-src 'self' data: https://*.twimg.com"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://platform.twitter.comhttps://cdn.syndication.twimg.comstyle-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://.twimg.com https://pbs.twimg.comconnect-src 'self' https://api.twitter.comttps://syndication.twitter.comhttps://cdn.syndication.twimg.comhttps://.twimg.com; frame-src https://platform.twitter.comfont-src 'self' data: https://*.twimg.com"
         },
         {
           "key": "Cache-Control",
