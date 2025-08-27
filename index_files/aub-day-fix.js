@@ -65,7 +65,7 @@
     const token = ++animToken;
 
     const finalStr = String(targetNumber);
-    const slots = ensureSlots(finalStr.length);
+    const slots = ensureSlots(Math.max(2, finalStr.length));
     const finalDigits = finalStr.padStart(slots.length, '0').split('').map(Number);
 
     // Scramble (quick, shuffly; eases out so it breathes a bit)
