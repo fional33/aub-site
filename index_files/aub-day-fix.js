@@ -119,40 +119,130 @@
     return Array.from(root.querySelectorAll('.aub-digit'));
   }
 
-  // Random scramble with easing → 3 slow ticks → final
-  function shuffleTo(root, targetNumber) {
-    if (prefersReduced()) {
-      setDigits(root, targetNumber);
-      return;
+// MOVEMENT ENGINE — smooth rAF scramble → decel settle (no CSS/markup changes)
+function shuffleTo(root, targetNumber) {
+  // Local movement tuning (kept inside the function so we don't touch globals)
+  const CFG = {
+    SCRAMBLE_MS: 1100,   // total random phase time
+    MIN_INTERVAL: 28,    // fastest random tick (ms)
+    MAX_INTERVAL: 105,   // slowest random tick (ms) toward the end
+    JITTER_MS: 20,       // tiny per-slot jitter
+    LAST_TICKS: 4,       // show 3 pre-final ticks + final
+    FINAL_TICK_BASE: 90, // first slow tick delay (ms) after scramble
+    FINAL_TICK_GROW: 1.55,
+    LANE_DELAY: 36       // slight cascade per digit during settle
+  };
+
+  // If reduced motion is on, just snap to final
+  const prefersReduced = () =>
+    window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced()) {
+    setDigits(root, targetNumber);
+    return;
+  }
+
+  // Ensure the right amount of slots and get digit elements
+  const finalStr = String(targetNumber);
+  const digits = Math.max(MIN_DIGITS, finalStr.length);
+  const els = rebuildSlots(root, digits);
+  const finalVals = finalStr.padStart(digits, '0').split('').map(n => +n);
+
+  root.classList.add('is-scrambling');
+  root.classList.remove('is-final');
+
+  // State per lane
+  const shown = new Int8Array(digits);           // last number actually painted
+  const nextTickAt = new Float64Array(digits);   // when to change next during scramble
+  const settleTimes = new Array(digits);         // scheduled settle ticks (times)
+  const easeOutExpo = t => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
+
+  // Init: set all to 0 once (avoids extra paints)
+  for (let i = 0; i < digits; i++) {
+    shown[i] = 0;
+    els[i].textContent = '0';
+  }
+
+  // Phase A timing
+  const t0 = performance.now();
+  for (let i = 0; i < digits; i++) {
+    nextTickAt[i] = t0 + Math.random() * 50 + i * 12; // initial jitter
+  }
+
+  // Precompute Phase B settle schedule (rAF-driven, no setTimeouts)
+  //  - LAST_TICKS-1 pre-final randoms, then the final value
+  for (let i = 0; i < digits; i++) {
+    let acc = t0 + CFG.SCRAMBLE_MS + i * CFG.LANE_DELAY;
+    const seq = [];
+    // pre-final ticks
+    for (let k = 0; k < CFG.LAST_TICKS - 1; k++) {
+      acc += (k === 0 ? CFG.FINAL_TICK_BASE : CFG.FINAL_TICK_BASE * Math.pow(CFG.FINAL_TICK_GROW, k));
+      seq.push({ when: acc, final: false });
     }
+    // final tick
+    acc += CFG.FINAL_TICK_BASE * Math.pow(CFG.FINAL_TICK_GROW, CFG.LAST_TICKS - 1);
+    seq.push({ when: acc, final: true });
+    settleTimes[i] = seq;
+  }
 
-    const finalStr = String(targetNumber);
-    const digits = Math.max(MIN_DIGITS, finalStr.length);
-    const els = rebuildSlots(root, digits);
-    const final = finalStr.padStart(digits, '0').split('').map(n => +n);
+  let phase = 'scramble';
 
-    root.classList.add('is-scrambling');
-    root.classList.remove('is-final');
-
-    // Phase A — scramble with decelerating pace
-    const start = performance.now();
-    const lastTouch = new Array(digits).fill(0);
-    function scramble(now) {
-      const t = Math.min(1, (now - start) / SCRAMBLE_MS);
+  function frame(now) {
+    if (phase === 'scramble') {
+      const t = Math.min(1, (now - t0) / CFG.SCRAMBLE_MS);
       const eased = easeOutExpo(t);
-      const interval = MIN_INTERVAL + (MAX_INTERVAL - MIN_INTERVAL) * eased;
+      const interval = CFG.MIN_INTERVAL + (CFG.MAX_INTERVAL - CFG.MIN_INTERVAL) * eased;
 
       for (let i = 0; i < digits; i++) {
-        const jitter = Math.random() * JITTER_MS + i * 5; // slight stagger per slot
-        if (now - lastTouch[i] >= interval + jitter) {
-          let r = (Math.random() * 10) | 0;
+        if (now >= nextTickAt[i]) {
+          // choose a different random than the one currently shown
+          let r;
+          do { r = (Math.random() * 10) | 0; } while (r === shown[i]);
+          shown[i] = r;
           els[i].textContent = String(r);
-          lastTouch[i] = now;
+          nextTickAt[i] = now + interval + Math.random() * CFG.JITTER_MS + i * 3;
         }
       }
-      if (t < 1) requestAnimationFrame(scramble);
-      else settle();
+
+      if (t >= 1) {
+        phase = 'settle';
+      }
     }
+
+    if (phase === 'settle') {
+      let allDone = true;
+
+      for (let i = 0; i < digits; i++) {
+        const seq = settleTimes[i];
+        while (seq.length && now >= seq[0].when) {
+          const step = seq.shift();
+          let v;
+          if (step.final) {
+            v = finalVals[i];
+          } else {
+            // pre-final: random not equal to currently shown and not equal to final
+            do { v = (Math.random() * 10) | 0; } while (v === shown[i] || v === finalVals[i]);
+          }
+          if (v !== shown[i]) {
+            shown[i] = v;
+            els[i].textContent = String(v);
+          }
+        }
+        if (seq.length) allDone = false;
+      }
+
+      if (allDone) {
+        root.classList.remove('is-scrambling');
+        root.classList.add('is-final');
+        return; // stop rAF
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+}
+
 
     // Phase B — 3 slow ticks per digit, then final
     function settle() {
