@@ -39,12 +39,12 @@
     s.id = 'aub-roller-style';
     s.textContent = `
       ${ROOT} {
-        display:inline-flex; gap:12px; white-space:nowrap; position:relative;
+        display:inline-flex; gap:6px; white-space:nowrap; position:relative;
         font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
         -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
       }
       ${ROOT} .aub-col{
-        position:relative; width:140px; height:200px; overflow:hidden;
+        position:relative; width:70px; height:100px; overflow:hidden;
         border-radius:6px; background:#0d0d0d; box-shadow:0 3px 10px #111;
         border-top:1px solid #393;    /* subtle rim; keep card pure black inside */
       }
@@ -53,8 +53,8 @@
         transform:translateY(0);
       }
       ${ROOT} .aub-cell{
-        width:140px; display:flex; align-items:center; justify-content:center;
-        color:#fff; font-size:145px; line-height:1; letter-spacing:0;
+        width:70px; display:flex; align-items:center; justify-content:center;
+        color:#fff; font-size:72px; line-height:1; letter-spacing:0;
         text-shadow:none; filter:none; user-select:none;
       }
       /* hide any legacy children that caused double numbers */
