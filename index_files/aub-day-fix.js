@@ -6,7 +6,7 @@
   );
   const LOOPS = 14;                 // tall reels so we never run out
   const SLOT_ASPECT = 0.62;         // width = size * aspect
-  const SIZE_PX = 72;               // default height for HALF (panel); full slot = 2*SIZE_PX
+  const SIZE_PX = 48;               // default height for HALF (panel); full slot = 2*SIZE_PX
 
   const root = document.querySelector('.aub-day-odometer');
   if (!root) return;
