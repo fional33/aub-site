@@ -70,41 +70,63 @@
   }
 
   // ============ ANIMATION: RANDOM SCRAMBLE → SLOW 3–4 TICKS → REVEAL ============
-  function shuffleTo(target) {
-    const root = getRoot();
-    if (!root) return;
+  // Faster, more "shuffly" scramble with a short slow reveal
+function shuffleTo(target) {
+  const root = document.querySelector('.aub-day-odometer');
+  if (!root) return;
 
-    const finalStr = String(target);
-    const slots = ensureSlots(finalStr.length);
-    const finalDigits = finalStr.padStart(slots.length, '0').split('').map(Number);
+  const finalStr = String(target);
+  const slots = ensureSlots(finalStr.length);
+  const finalDigits = finalStr.padStart(slots.length, '0').split('').map(Number);
 
-    // Phase A: random scramble (slower overall pace)
-    const SCRAMBLE_MS = 2300;                 // total scramble time
-    const MIN_INTERVAL = 55;                  // fastest random change
-    const MAX_INTERVAL = 220;                 // slows toward the end
-    const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+  // Phase A: quick random scramble
+  const SCRAMBLE_MS = 1200;   // was ~2100
+  const MIN_INTERVAL = 22;    // more frequent changes
+  const MAX_INTERVAL = 120;   // still eases out
+  const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
 
-    const start = performance.now();
-    const lastUpdate = Array(slots.length).fill(0);
+  const start = performance.now();
+  const lastUpdate = Array(slots.length).fill(0);
 
-    function scramble(now) {
-      const elapsed = now - start;
-      const t = Math.min(1, elapsed / SCRAMBLE_MS);
-      const eased = easeOutCubic(t);
-      const interval = MIN_INTERVAL + (MAX_INTERVAL - MIN_INTERVAL) * eased;
+  function scramble(now) {
+    const t = Math.min(1, (now - start) / SCRAMBLE_MS);
+    const interval = MIN_INTERVAL + (MAX_INTERVAL - MIN_INTERVAL) * easeOutCubic(t);
 
-      slots.forEach((el, i) => {
-        // jitter to avoid syncing all digits
-        const jitter = Math.random() * 30;
-        if (now - lastUpdate[i] >= interval + jitter) {
-          el.textContent = Math.floor(Math.random() * 10);
-          lastUpdate[i] = now;
-        }
-      });
+    slots.forEach((el, i) => {
+      const jitter = Math.random() * 60;               // extra desync
+      if (now - lastUpdate[i] >= interval + jitter) {
+        el.textContent = Math.floor(Math.random() * 10);
+        lastUpdate[i] = now;
+      }
+    });
 
-      if (t < 1) requestAnimationFrame(scramble);
-      else settle();
-    }
+    if (t < 1) requestAnimationFrame(scramble);
+    else settle();
+  }
+
+  // Phase B: 3 quick slow-down ticks, then reveal
+  function settle() {
+    const SETTLE_STEPS = 4;   // 3 pre-final + final
+    const SETTLE_BASE_MS = 70;
+    const SETTLE_GROW = 1.5;
+
+    slots.forEach((el, i) => {
+      const seq = [];
+      for (let k = 0; k < SETTLE_STEPS - 1; k++) {
+        let d;
+        do { d = Math.floor(Math.random() * 10); } while (d === finalDigits[i]);
+        seq.push(d);
+      }
+      seq.push(finalDigits[i]);
+
+      let delay = SETTLE_BASE_MS + i * 35;            // tiny per-digit stagger
+      seq.forEach(d => { setTimeout(() => { el.textContent = d; }, Math.round(delay)); delay *= SETTLE_GROW; });
+    });
+  }
+
+  requestAnimationFrame(scramble);
+}
+
 
     // Phase B: last 3–4 numbers slow down per slot, then reveal final
     function settle() {
