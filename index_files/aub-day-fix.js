@@ -8,9 +8,8 @@
   const root = document.querySelector('.aub-day-odometer');
   if (!root) return;
 
-  // nuke any leftover static markup
-  while (root.firstChild) root.removeChild(root.firstChild);
-
+  // clear any old/static content
+  root.textContent = '';
   injectCSS();
 
   // ---------- DOM ----------
@@ -21,7 +20,10 @@
       for (let d = 0; d < 10; d++) {
         const cell = document.createElement('span');
         cell.className = 'aub-cell';
-        cell.textContent = d;
+        const glyph = document.createElement('span');
+        glyph.className = 'aub-glyph';
+        glyph.textContent = d;
+        cell.appendChild(glyph);
         reel.appendChild(cell);
       }
     }
@@ -54,12 +56,12 @@
     return Math.max(1, Math.round(c?.getBoundingClientRect().height || 0));
   }
 
-  // land on digit (use second cycle 10..19 to avoid wrap jump)
+  // land on digit (use second cycle 10..19 for seamless wrap)
   function setReel(slot, digit, {immediate=false, dur=0, ease='' } = {}) {
     const reel = slot.querySelector('.aub-reel');
     if (!reel) return;
     const h = cellH(slot);
-    const off = h * (((digit % 10) + 10) % 10 + 10);
+    const off = h * ((((digit % 10) + 10) % 10) + 10);
     if (dur) reel.style.transition = `transform ${dur}ms ${ease || 'cubic-bezier(.2,.7,.2,1)'}`;
     if (immediate) {
       const prev = reel.style.transition;
@@ -78,10 +80,10 @@
     const slots = ensureSlots(str.length);
     const final = str.padStart(slots.length, '0').split('').map(n => +n);
 
-    // initialize on a clean line
+    // initialize to random digits (no jump)
     slots.forEach(s => setReel(s, Math.floor(Math.random()*10), {immediate:true}));
 
-    // Phase A: smooth random scramble (GPU-only transform updates)
+    // Phase A: smooth random shuffle (decelerating)
     const A_MS = 800;
     const t0   = performance.now();
     const easeOut = t => 1 - Math.pow(1 - t, 3);
@@ -95,12 +97,10 @@
         const reel = slot.querySelector('.aub-reel');
         if (!reel) continue;
         const h = cellH(slot);
-
-        // randomized spin distance that shrinks over time
-        const jitter = (0.9 + Math.random()*0.2);             // slight variance
-        const spins  = (16 - i*3) * (1 - v) * jitter + 2;      // more early motion
-        const px     = (h * 10) + h * spins;                   // base second cycle + extra
-        reel.style.transition = 'transform 80ms cubic-bezier(.2,.7,.2,1)';
+        const jitter = 0.9 + Math.random() * 0.2;         // desync
+        const spins  = (16 - i*3) * (1 - v) * jitter + 2;  // more early motion
+        const px     = (h * 10) + h * spins;
+        reel.style.transition = 'transform 70ms cubic-bezier(.2,.7,.2,1)';
         reel.style.transform  = `translate3d(0, ${-px}px, 0)`;
       }
 
@@ -111,13 +111,13 @@
     // Phase B: three soft ticks → final
     function settle() {
       const TICKS = 3;
-      const STEP  = 120; // ms
+      const STEP  = 120; // ms between ticks
       slots.forEach((slot, i) => {
         const fd = final[i];
         for (let k = 0; k <= TICKS; k++) {
           const d = (fd - (TICKS - k) + 20) % 10; // fd-3, fd-2, fd-1, fd
           const delay = Math.round(STEP * (k + 1) * (1 + i*0.08));
-          setTimeout(() => setReel(slot, d, { dur: 130 + k*20, ease: 'cubic-bezier(.15,.9,.1,1)' }), delay);
+          setTimeout(() => setReel(slot, d, { dur: 120 + k*20, ease: 'cubic-bezier(.15,.9,.1,1)' }), delay);
         }
       });
     }
@@ -138,14 +138,14 @@
 
   updateDay();
 
-  // next UTC midnight then every 24h
+  // next UTC midnight, then every 24h
   (function scheduleMidnight() {
     const n = new Date();
     const next = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()+1, 0,0,0));
     setTimeout(() => { updateDay(); setInterval(updateDay, 86400000); }, next - n);
   })();
 
-  // console helper
+  // console helper for testing
   window.AUB_SHUFFLE = (n) => scrambleThenReveal(String(n).padStart(2,'0'));
 
   // ---------- CSS ----------
@@ -160,11 +160,13 @@
   contain:paint;isolation:isolate}
 .aub-day-odometer .aub-reel{display:block;will-change:transform;transform:translate3d(0,0,0)}
 .aub-day-odometer .aub-cell{display:flex;align-items:center;justify-content:center;
-  width:100%;height:1em;font-weight:800;font-size:1.1em;line-height:1;
-  color:#f6fbff; text-shadow:none; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility}
-  /* remove half-gray overlays; just a subtle seam */
-.aub-day-odometer .aub-slot::before, .aub-day-odometer .aub-slot::after{content:"";position:absolute;left:0;right:0;pointer-events:none}
-.aub-day-odometer .aub-slot::after{top:50%;height:1px;background:rgba(255,255,255,.06)}
+  width:100%;height:1em;overflow:visible; /* allow glyph to cross the mid seam */
+  font-weight:800;font-size:1.1em;line-height:1;color:#f6fbff;
+  text-shadow:none;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.aub-day-odometer .aub-glyph{transform:translateY(-0.02em);will-change:transform}
+  /* seam (very subtle) */
+.aub-day-odometer .aub-slot::after{content:"";position:absolute;left:0;right:0;top:50%;
+  height:1px;background:rgba(255,255,255,.04);pointer-events:none}
 `;
     const style = document.createElement('style');
     style.id = 'aub-odo-css';
