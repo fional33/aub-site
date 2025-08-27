@@ -3,45 +3,49 @@
   const MIN_DIGITS = 2;
 
   // Shuffle feel
-  const SCRAMBLE_MS = 950;
-  const SETTLE_TICKS = 4;
-  const SETTLE_BASE = 110;
-  const SETTLE_GROW = 1.7;
+  const SCRAMBLE_MS = 900;   // fast-ish global scramble
+  const SETTLE_TICKS = 4;    // 3 slow ticks + final
+  const SETTLE_BASE = 95;
+  const SETTLE_GROW = 1.75;
 
   const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
-  const pad = (n, d=MIN_DIGITS) => String(n).padStart(d, '0');
+  const pad = (n, d = MIN_DIGITS) => String(n).padStart(d, '0');
   const rootEl = () => document.querySelector(SELECTOR);
 
+  // --- Style: layout + transitions + nuke pseudo-content ---
   function injectStyle() {
     if (document.getElementById('aub-day-style')) return;
     const style = document.createElement('style');
     style.id = 'aub-day-style';
     style.textContent = `
-      ${SELECTOR}{display:inline-flex;gap:.06em;font-variant-numeric:tabular-nums}
+      ${SELECTOR}{position:relative;display:inline-flex;gap:.06em;font-variant-numeric:tabular-nums;white-space:nowrap}
+      ${SELECTOR}::before,${SELECTOR}::after{content:none !important}
       ${SELECTOR} .slot{position:relative;display:inline-block;width:.65em;height:1em;overflow:hidden}
-      ${SELECTOR} .digit{position:absolute;inset:0 auto auto 0;line-height:1em;transform:translateY(0);opacity:1;
-        transition:transform 140ms ease,opacity 140ms ease,filter 140ms ease;will-change:transform,opacity,filter}
+      ${SELECTOR} .digit{
+        position:absolute;left:0;top:0;right:auto;bottom:auto;
+        line-height:1em;transform:translateY(0);opacity:1;
+        transition:transform 140ms ease,opacity 140ms ease,filter 140ms ease;
+        will-change:transform,opacity,filter
+      }
       ${SELECTOR} .digit.enter{transform:translateY(40%);opacity:0;filter:blur(2px)}
       ${SELECTOR} .digit.enter.active{transform:translateY(0);opacity:1;filter:blur(0)}
       ${SELECTOR} .digit.leave{transform:translateY(-40%);opacity:0;filter:blur(2px)}
+      /* If any non-slot sneaks in, keep it hidden */
+      ${SELECTOR} > :not(.slot){display:none !important}
     `;
     document.head.appendChild(style);
   }
 
-  // ---- CLEAN any static content so only animated slots exist ----
-  function purgeForeignChildren(root) {
+  // --- Purge everything except .slot elements (or just hard-clear) ---
+  function wipeRoot(root) {
     if (!root) return;
-    // Remove text nodes and non-.slot elements
-    Array.from(root.childNodes).forEach(n => {
-      const isSlot = n.nodeType === 1 && n.classList.contains('slot');
-      if (!isSlot) n.remove();
-    });
+    // total wipe to remove text nodes and any stray markup
+    root.replaceChildren();
   }
 
   function ensureSlots(count) {
     const root = rootEl();
     if (!root) return [];
-    purgeForeignChildren(root);
     let slots = Array.from(root.querySelectorAll('.slot'));
     while (slots.length < count) {
       const slot = document.createElement('span');
@@ -80,7 +84,7 @@
     }, { once: true });
   }
 
-  // ---- Day math (UTC) ----
+  // --- Day math (UTC) ---
   function getLaunchDateUTC() {
     const meta = document.querySelector('meta[name="aub-launch-utc"]')?.content;
     const raw = meta || window.AUB_LAUNCH_UTC || '2025-08-25T00:00:00Z';
@@ -100,11 +104,11 @@
     const now = new Date();
     const nowUTC = now.getTime() + now.getTimezoneOffset() * 60000;
     const d = new Date(nowUTC);
-    const nextMid = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0, 80);
+    const nextMid = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0, 100);
     return Math.max(1000, nextMid - nowUTC);
   }
 
-  // ---- Display helpers ----
+  // --- Label + instant set ---
   function setLabel(dayStr) {
     const root = rootEl();
     if (root) root.setAttribute('aria-label', `DAY ${dayStr}`);
@@ -123,7 +127,7 @@
     setLabel(dayStr.padStart(2, '0'));
   }
 
-  // ---- Smooth SHUFFLE → slow ticks → reveal ----
+  // --- SHUFFLE → slow 3 ticks → reveal ---
   function shuffleTo(target) {
     const root = rootEl();
     if (!root) return;
@@ -135,7 +139,7 @@
       const n = parseInt(s.querySelector('.digit')?.textContent || '0', 10);
       return Number.isFinite(n) ? n : 0;
     });
-    const speeds = slots.map(() => 38 + Math.random() * 22);
+    const speeds = slots.map(() => 42 + Math.random() * 22);  // per-slot speed
     const nextAt = slots.map(() => 0);
 
     const t0 = performance.now();
@@ -143,7 +147,7 @@
 
     function loop(now) {
       const t = Math.min(1, (now - t0) / SCRAMBLE_MS);
-      const slow = 1 - 0.6 * easeOutCubic(t);
+      const slow = 1 - 0.65 * easeOutCubic(t);
 
       if (!settling) {
         slots.forEach((slot, i) => {
@@ -154,7 +158,7 @@
             lastShown[i] = next;
 
             const dps = Math.max(8, speeds[i] * slow);
-            nextAt[i] = now + 1000 / dps + Math.random() * 35;
+            nextAt[i] = now + 1000 / dps + Math.random() * 30;
           }
         });
 
@@ -196,9 +200,8 @@
   }
 
   function updateDayDisplay() {
-    const day = computeDayUTC();
-    const s = pad(day);
-    shuffleTo(s);
+    const day = pad(computeDayUTC());
+    shuffleTo(day);
   }
 
   function scheduleRollover() {
@@ -208,17 +211,42 @@
     }, msUntilNextUtcMidnight());
   }
 
+  // Keep container clean in case something tries to re-hydrate static digits
+  function guardRoot(root) {
+    const mo = new MutationObserver(() => {
+      // if anything other than .slot appears, wipe & rebuild current value
+      const bad = Array.from(root.childNodes).some(n => !(n.nodeType === 1 && n.classList.contains('slot')));
+      if (bad) {
+        const current = root.getAttribute('aria-label')?.match(/\d+/)?.[0] || pad(computeDayUTC());
+        wipeRoot(root);
+        const slots = ensureSlots(current.length);
+        current.split('').forEach((d, i) => swapDigit(slots[i], d));
+      }
+    });
+    mo.observe(root, { childList: true });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     injectStyle();
     const root = rootEl();
     if (!root) return;
 
-    // Important: nuke any static digits so only animated slots remain
-    purgeForeignChildren(root);
+    // HARD WIPE of any static DOM the server shipped
+    wipeRoot(root);
 
+    // Initial render
     const today = pad(computeDayUTC());
-    setDigitsInstant(today);
-    setTimeout(() => shuffleTo(today), 60);
+    const slots = ensureSlots(today.length);
+    today.split('').forEach((d, i) => swapDigit(slots[i], d));
+    setLabel(today);
+
+    // Give a tiny pause then do the shuffle effect to same value (makes it feel alive)
+    setTimeout(() => shuffleTo(today), 50);
+
+    // Midnight UTC rollover
     scheduleRollover();
+
+    // Guard against re-insertion of static nodes
+    guardRoot(root);
   });
 })();
