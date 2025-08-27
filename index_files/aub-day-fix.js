@@ -1,94 +1,106 @@
 (() => {
-  const SEL = '.aub-day-odometer';
+  const launchStr =
+    document.querySelector('meta[name="aub-launch-utc"]')?.content ||
+    window.AUB_LAUNCH_UTC || '2025-08-25T00:00:00Z';
+  const LAUNCH_UTC = new Date(launchStr);
+  if (isNaN(LAUNCH_UTC)) return;
 
-  function getRoot() { return document.querySelector(SEL); }
+  const root = document.querySelector('.aub-day-odometer');
+  if (!root) return;
 
-  function hashClass(el) {
-    return Array.from(el.classList).find(c => /^jsx-/.test(c)) || '';
-  }
+  const SLOT_CLASS = 'slot';
 
-  function ensureSlots(root) {
-    const sc = `slot ${hashClass(root)}`;
-    let slots = Array.from(root.querySelectorAll('.slot'));
-    while (slots.length < 2) {
-      const s = document.createElement('span');
-      s.className = sc;
-      s.textContent = '0';
-      root.appendChild(s);
-      slots = Array.from(root.querySelectorAll('.slot'));
+  function ensureSlots(count){
+    let slots = Array.from(root.querySelectorAll('.' + SLOT_CLASS));
+    if (!slots.length) {
+      const span = document.createElement('span');
+      span.className = SLOT_CLASS;
+      span.textContent = '0';
+      root.append(span);
+      slots = [span];
+    }
+    while (slots.length < count){
+      const clone = slots[0].cloneNode(true);
+      clone.textContent = '0';
+      root.prepend(clone);
+      slots = Array.from(root.querySelectorAll('.' + SLOT_CLASS));
     }
     return slots;
   }
 
-  function launchUTC() {
-    const meta = document.querySelector('meta[name="aub-launch-utc"]');
-    const iso = meta?.content || (window.AUB_LAUNCH_UTC ?? '2025-08-25T00:00:00Z');
-    return new Date(iso);
+  function renderInstant(n){
+    const s = String(n);
+    const slots = ensureSlots(s.length);
+    const padded = s.padStart(slots.length,'0').split('');
+    slots.forEach((el,i)=> el.textContent = padded[i]);
   }
 
-  function computeDay() {
-    const now = new Date();
-    const day = Math.max(1, Math.floor((now - launchUTC()) / 86400000) + 1);
-    return Math.min(day, 99);
-  }
+  // Longer shuffle with smooth ease-out
+  function shuffleTo(target){
+    const finalStr = String(target);
+    const slots = ensureSlots(finalStr.length);
+    const finalDigits = finalStr.padStart(slots.length,'0').split('').map(d=>+d);
+    const startDigits = slots.map(s => +s.textContent || 0);
 
-  function setLabel(root, n) {
-    root.setAttribute('aria-label', `DAY ${String(n).padStart(2, '0')}`);
-  }
+    const DURATION_MS = 2600;     // longer
+    const CYCLES_BASE = 22;       // more spins
+    const CYCLES_SPREAD = 12;     // random extra spins
+    const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
 
-  function shuffleTo(root, n) {
-    const digits = String(n).padStart(2, '0').split('');
-    const slots = ensureSlots(root);
-    const h = hashClass(root);
-    root.classList.add('rolling', h);
-    const duration = 700;
-    const hops = [14, 20]; // left, right
+    const stepsPerSlot = slots.map((_, i) => {
+      const diff = (finalDigits[i] - startDigits[i] + 10) % 10;
+      const cycles = CYCLES_BASE + i * 2 + Math.floor(Math.random() * CYCLES_SPREAD);
+      return cycles * 10 + diff;
+    });
 
-    const start = performance.now();
-    function tick(t) {
-      const prog = Math.min(1, (t - start) / duration);
-      slots.forEach((slot, i) => {
-        if (prog < 1) {
-          const step = Math.floor(prog * hops[i]);
-          slot.textContent = String((step % 10));
-        } else {
-          slot.textContent = digits[i];
-        }
+    const t0 = performance.now();
+    function tick(now){
+      const t = Math.min(1, (now - t0) / DURATION_MS);
+      const eased = easeOutCubic(t);
+      slots.forEach((el, i) => {
+        const k = Math.floor(stepsPerSlot[i] * eased);
+        el.textContent = (startDigits[i] + k) % 10;
       });
-      if (prog < 1) requestAnimationFrame(tick);
-      else root.classList.remove('rolling');
+      if (t < 1) requestAnimationFrame(tick);
+      else slots.forEach((el, i) => { el.textContent = finalDigits[i]; });
     }
     requestAnimationFrame(tick);
   }
 
-  function apply({ animate } = { animate: true }) {
-    const root = getRoot();
-    if (!root) return;
-    const n = computeDay();
-    setLabel(root, n);
-    if (animate) shuffleTo(root, n);
-    else {
-      const d = String(n).padStart(2, '0').split('');
-      const [a, b] = ensureSlots(root);
-      a.textContent = d[0]; b.textContent = d[1];
-    }
+  function dayNumberUTC(date){
+    const launchMid = Date.UTC(
+      LAUNCH_UTC.getUTCFullYear(), LAUNCH_UTC.getUTCMonth(), LAUNCH_UTC.getUTCDate()
+    );
+    const nowMid = Date.UTC(
+      date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()
+    );
+    const days = Math.floor((nowMid - launchMid) / 86400000) + 1;
+    return Math.max(1, days);
   }
 
-  function msUntilNextUtcMidnight() {
-    const now = new Date();
-    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
-    return next - now + 50;
+  function updateDay(animated){
+    const day = dayNumberUTC(new Date());
+    const prev = Number(root.dataset.day || '0');
+    root.setAttribute('aria-label', `DAY ${String(day).padStart(2,'0')}`);
+    root.dataset.day = String(day);
+    if (animated && day !== prev) shuffleTo(day);
+    else if (!prev) shuffleTo(day); // animate on first paint
+    else renderInstant(day);
   }
 
-  // Run now, then at next UTC midnight (no animation on rollover)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => apply({ animate: true }));
-  } else {
-    apply({ animate: true });
+  function msUntilNextUtcMidnight(){
+    const n = new Date();
+    const next = new Date(Date.UTC(
+      n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1, 0, 0, 0
+    ));
+    return next.getTime() - n.getTime();
   }
-  setTimeout(() => apply({ animate: false }), msUntilNextUtcMidnight());
 
-  // Minimal debug helpers
-  window.AUB_SHUFFLE = () => apply({ animate: true });
-  window.AUB_UPDATE  = () => apply({ animate: false });
+  // init + precise UTC rollover + safety ping
+  updateDay(true);
+  setTimeout(() => {
+    updateDay(true);
+    setInterval(() => updateDay(true), 24*3600*1000);
+  }, msUntilNextUtcMidnight() + 50);
+  setInterval(() => updateDay(false), 5*60*1000);
 })();
