@@ -1,9 +1,6 @@
 (() => {
-  // =========================
-  // CONFIG
-  // =========================
   const ROOT_SEL = '.aub-day-odometer';
-  const MIN_DIGITS = 2; // show at least "02"
+  const MIN_DIGITS = 2;
 
   // shuffle feel
   const LOOPS_BASE   = 6;
@@ -13,9 +10,7 @@
   const LAST_TICKS   = [180, 260, 360];
   const EASE         = 'cubic-bezier(.25,.9,.1,1)';
 
-  // =========================
-  // DAY (UTC)
-  // =========================
+  // ---------- UTC day ----------
   function getLaunchUTC() {
     const meta = document.querySelector('meta[name="aub-launch-utc"]')?.content;
     const raw  = meta || window.AUB_LAUNCH_UTC || '2025-08-25T00:00:00Z';
@@ -38,9 +33,7 @@
   }
   const pad2 = v => String(v).padStart(MIN_DIGITS, '0');
 
-  // =========================
-  // STYLE (namespaced + corrected stacking)
-  // =========================
+  // ---------- style ----------
   function injectStyle() {
     if (document.getElementById('aub-flip-style')) return;
     const s = document.createElement('style');
@@ -51,38 +44,28 @@
         font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
         -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
       }
-
-      /* column wrapper */
       ${ROOT_SEL} .aub-col {
         position:relative; width:140px; height:200px; perspective:1000px;
         display:inline-block; border-top:1px solid #393939; box-shadow:0 3px 10px #111;
         border-radius:6px; overflow:hidden; background:#1a1a1a;
       }
-
-      /* seam line sits ABOVE digits (thin) */
       ${ROOT_SEL} .aub-col::before {
         content:""; position:absolute; left:0; top:50%; width:100%; height:1px;
         transform:translateY(-.5px); border-bottom:1px solid rgba(0,0,0,.55);
         z-index:4; pointer-events:none;
       }
-
-      /* lower-half tint behind everything */
       ${ROOT_SEL} .aub-col::after {
         content:""; position:absolute; left:0; bottom:0; width:100%; height:calc(50% - 1px);
-        background:linear-gradient(#262626, #1b1b1b); border-top:1px solid #0005;
+        background:linear-gradient(#262626,#1b1b1b); border-top:1px solid #0005;
         box-shadow:inset 0 15px 50px #1a1a1a;
         z-index:1; pointer-events:none;
       }
-
-      /* flip card (now explicitly above column ::after, below seam) */
       ${ROOT_SEL} .aub-card {
         position:absolute; inset:0; transform-style:preserve-3d;
         transform:rotateX(0deg) translateZ(0.001px);
         will-change:transform; backface-visibility:hidden; -webkit-backface-visibility:hidden;
         border-radius:5px; z-index:2;
       }
-
-      /* faces: clipped halves */
       ${ROOT_SEL} .aub-card::before,
       ${ROOT_SEL} .aub-card::after {
         position:absolute; left:0; width:100%; overflow:hidden;
@@ -91,16 +74,15 @@
         font-size:145px; line-height:1; letter-spacing:0;
         text-shadow:0 0.5px 0.5px #222;
       }
-
-      /* top half shows current digit */
+      /* top half (current digit) */
       ${ROOT_SEL} .aub-card::before {
         content:attr(data-num); top:0; height:50%;
         background:linear-gradient(#1c1c1c,#111); border-radius:5px 5px 0 0;
         box-shadow:inset 0 15px 50px #0f0f0f;
         transform-origin:center bottom; z-index:3;
       }
-
-      /* bottom half sits at 50%, rotated 180° to face down */
+      /* bottom half: by default mirror the CURRENT digit so it spans both halves.
+         During the flip we temporarily switch its content via data-idle="0". */
       ${ROOT_SEL} .aub-card::after {
         content:attr(data-num-next); top:50%; height:50%;
         background:linear-gradient(#252525,#1a1a1a);
@@ -108,30 +90,29 @@
         box-shadow:inset 0 15px 50px #1a1a1a;
         transform:rotateX(180deg); transform-origin:center top; z-index:2;
       }
+      /* IDLE: force the lower half to show the SAME digit as the top */
+      ${ROOT_SEL} .aub-card[data-idle="1"]::after { content:attr(data-num); }
 
-      /* Kill any legacy nodes inside the odometer to avoid double layers */
+      /* Hide any legacy children that could overlap */
       ${ROOT_SEL} > :not(.aub-col) { display:none !important; }
     `;
     document.head.appendChild(s);
   }
 
-  // =========================
-  // BUILD / RESET
-  // =========================
   const rootEl = () => document.querySelector(ROOT_SEL);
 
   function buildCols(count){
     const root = rootEl(); if (!root) return [];
-    root.textContent = ''; // remove legacy children
+    root.textContent = '';
     const frag = document.createDocumentFragment();
     for (let i=0; i<count; i++){
       const col  = document.createElement('div');
       col.className = 'aub-col';
       const card = document.createElement('div');
       card.className = 'aub-card';
-      // seed digits so content renders immediately
       card.dataset.num = '0';
-      card.dataset.numNext = '1';
+      card.dataset.numNext = '0';  // bottom shows SAME digit when idle
+      card.dataset.idle = '1';
       col.appendChild(card);
       frag.appendChild(col);
     }
@@ -139,30 +120,33 @@
     return Array.from(root.querySelectorAll('.aub-col'));
   }
 
-  // =========================
-  // FLIP ENGINE
-  // =========================
+  // ----- flip engine -----
   function flipOnce(col, nextDigit, dur, cb){
     const card = col.querySelector('.aub-card');
     const cur  = parseInt(card.dataset.num || '0', 10) || 0;
 
-    // update faces
+    // Ensure idle state shows the same digit across halves
     card.dataset.num     = String(cur);
-    card.dataset.numNext = String(nextDigit);
+    card.dataset.numNext = String(cur);
+    card.dataset.idle    = '0';     // leaving idle: lower face will display next
 
-    // animate
     requestAnimationFrame(() => {
+      // PRIME next digit ONLY for the duration of the flip
+      card.dataset.numNext = String(nextDigit);
+
       card.style.transition = `transform ${Math.max(50,dur)}ms ${EASE}`;
       card.style.transform  = 'rotateX(-180deg) translateZ(0.001px)';
+
       const done = () => {
         card.removeEventListener('transitionend', done);
         card.style.transition = 'none';
         card.style.transform  = 'rotateX(0deg) translateZ(0.001px)';
-        card.dataset.num      = String(nextDigit);
-        card.dataset.numNext  = String((nextDigit + 1) % 10);
+        // Commit the new digit and return to idle (both halves match again)
+        card.dataset.num     = String(nextDigit);
+        card.dataset.numNext = String(nextDigit);
+        card.dataset.idle    = '1';
         cb && cb();
       };
-      // safety timeout in case transitionend is missed
       const to = setTimeout(done, Math.max(60, dur) + 40);
       card.addEventListener('transitionend', () => { clearTimeout(to); done(); }, { once:true });
     });
@@ -171,13 +155,11 @@
   function flipSequence(col, startDigit, steps, durations, onDone){
     let cur = startDigit % 10;
     let i = 0;
-    const tick = () => {
+    (function tick(){
       if (i >= steps) { onDone && onDone(); return; }
       const next = (cur + 1) % 10;
-      const dur  = durations[i];
-      flipOnce(col, next, dur, () => { cur = next; i++; tick(); });
-    };
-    tick();
+      flipOnce(col, next, durations[i], () => { cur = next; i++; tick(); });
+    })();
   }
 
   function planDurations(total){
@@ -186,16 +168,13 @@
     for (let i=0;i<body;i++){
       const t = body ? i/(body-1 || 1) : 1;
       const base = FAST_MIN + (FAST_MAX - FAST_MIN) * t;
-      const jitter = (Math.random()*2-1) * 20; // ±20ms
+      const jitter = (Math.random()*2-1) * 20;
       durs.push(Math.max(40, Math.round(base + jitter)));
     }
-    LAST_TICKS.forEach(ms => durs.push(ms)); // slow 3-tick finish
+    LAST_TICKS.forEach(ms => durs.push(ms));
     return durs;
   }
 
-  // =========================
-  // SHUFFLE TO TARGET
-  // =========================
   function shuffleTo(targetStr){
     const root = rootEl(); if (!root) return;
     const need = Math.max(MIN_DIGITS, targetStr.length);
@@ -226,9 +205,7 @@
     });
   }
 
-  // =========================
-  // TICK + ROLLOVER
-  // =========================
+  // ----- tick + rollover -----
   function updateDay(){
     const v = pad2(computeDayUTC());
     const root = rootEl(); if (!root) return;
@@ -239,9 +216,7 @@
     setTimeout(() => { updateDay(); scheduleRollover(); }, msUntilNextUtcMidnight());
   }
 
-  // =========================
-  // INIT
-  // =========================
+  // ----- init -----
   document.addEventListener('DOMContentLoaded', () => {
     const root = rootEl(); if (!root) return;
     if (root.dataset.aubInit === '1') return;
