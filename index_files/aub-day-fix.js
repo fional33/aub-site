@@ -2,15 +2,14 @@
   const SELECTOR = '.aub-day-odometer';
   const MIN_DIGITS = 2;
 
-  // Motion (all SNAP—no sliding = zero blur)
-  const SCRAMBLE_MS  = 650;     // total scramble time
-  const SCR_MIN      = 60;      // faster at start
-  const SCR_MAX      = 110;     // slower near end
-  const SETTLE_TICKS = 4;       // 3 slow ticks + final
-  const SETTLE_BASE  = 110;
-  const SETTLE_GROW  = 1.6;
+  // Motion: SNAP-only updates (no translate) to stay razor sharp
+  const SCRAMBLE_MS  = 520;  // quick shuffly burst
+  const SCR_MIN      = 40;   // faster at start
+  const SCR_MAX      = 90;   // slower near end
+  const SETTLE_TICKS = 4;    // 3 slow ticks + final
+  const SETTLE_BASE  = 90;
+  const SETTLE_GROW  = 1.55;
 
-  // ---------- Styles: no transforms/filters, tabular nums ----------
   function injectStyle(){
     if (document.getElementById('aub-day-style')) return;
     const style = document.createElement('style');
@@ -20,21 +19,16 @@
         position:relative;display:inline-flex;gap:.08em;white-space:nowrap;
         font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
         -webkit-font-smoothing:subpixel-antialiased; -moz-osx-font-smoothing:auto;
-        text-rendering:optimizeLegibility;
-        transform:none !important; filter:none !important; opacity:1 !important;
+        text-rendering:optimizeLegibility; transform:none !important; filter:none !important;
       }
-      /* hide any stray static layer */
+      /* If some stray element sits in the container, hide it */
       ${SELECTOR} > :not(.slot){display:none !important}
-
       ${SELECTOR} .slot{
         position:relative;display:inline-block;overflow:hidden;
-        width:.72em; height:var(--aub-h,40px); line-height:var(--aub-h,40px);
-        background:transparent !important; border:0; border-radius:0; padding:0;
+        width:.72em;height:var(--aub-h,40px);line-height:var(--aub-h,40px);
       }
       ${SELECTOR} .digit{
-        position:relative; display:block;
-        height:var(--aub-h,40px); line-height:var(--aub-h,40px);
-        text-shadow:none !important; filter:none !important; opacity:1 !important;
+        position:relative;display:block;height:var(--aub-h,40px);line-height:var(--aub-h,40px);
       }
     `;
     document.head.appendChild(style);
@@ -44,25 +38,27 @@
   const pad = (n, d = MIN_DIGITS) => String(n).padStart(d, '0');
 
   function measure(root){
-    const slot = document.createElement('span');
-    slot.className = 'slot'; slot.style.visibility = 'hidden'; slot.style.position = 'absolute';
+    const probeSlot = document.createElement('span');
+    probeSlot.className = 'slot'; probeSlot.style.visibility = 'hidden'; probeSlot.style.position = 'absolute';
     const d = document.createElement('span'); d.className = 'digit'; d.textContent = '0';
-    slot.appendChild(d); root.appendChild(slot);
+    probeSlot.appendChild(d); root.appendChild(probeSlot);
     const h = Math.max(10, Math.round(d.getBoundingClientRect().height));
-    root.style.setProperty('--aub-h', h + 'px'); slot.remove();
+    root.style.setProperty('--aub-h', h + 'px'); probeSlot.remove();
     return h;
   }
 
-  function ensureSlots(count){
+  // Hard reset: remove ALL children (kills static text nodes) and rebuild
+  function buildSlots(count){
     const root = rootEl(); if (!root) return [];
-    let slots = Array.from(root.querySelectorAll('.slot'));
-    while (slots.length < count){
+    root.textContent = ''; // nuke any static numbers / text nodes
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < count; i++){
       const s = document.createElement('span'); s.className = 'slot';
       const d = document.createElement('span'); d.className = 'digit'; d.textContent = '0';
-      s.appendChild(d); root.appendChild(s);
-      slots = Array.from(root.querySelectorAll('.slot'));
+      s.appendChild(d); frag.appendChild(s);
     }
-    return slots;
+    root.appendChild(frag);
+    return Array.from(root.querySelectorAll('.slot'));
   }
 
   function setDigit(slot, d){
@@ -94,29 +90,21 @@
   }
   function setLabel(dayStr){ rootEl()?.setAttribute('aria-label', `DAY ${dayStr}`); }
 
-  // Detect a transformed ancestor (causes grayscale AA/softness)
-  function nearestTransformedAncestor(el){
-    let cur = el;
-    while(cur && cur !== document.body){
-      const cs = getComputedStyle(cur);
-      if (cs.transform !== 'none' || cs.filter !== 'none' || cs.backdropFilter !== 'none' || parseFloat(cs.opacity) < 1){
-        return cur;
-      }
-      cur = cur.parentElement;
-    }
-    return null;
-  }
-
-  // ---------- SHUFFLE (snap) → slow 3 ticks → reveal ----------
+  // ---------- SHUFFLE (snap) → slow 3–4 ticks → reveal ----------
   function shuffleTo(target){
     const root = rootEl(); if (!root) return;
     const finalStr = String(target);
-    const slots = ensureSlots(Math.max(MIN_DIGITS, finalStr.length));
-    const finalDigits = finalStr.padStart(slots.length,'0').split('').map(Number);
+    const needed = Math.max(MIN_DIGITS, finalStr.length);
 
+    // If slot count mismatches or container still has text, rebuild fresh
+    const haveSlots = Array.from(root.querySelectorAll('.slot'));
+    const textNodesRemain = Array.from(root.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim() !== '');
+    const slots = (haveSlots.length !== needed || textNodesRemain) ? buildSlots(needed) : haveSlots;
+
+    const finalDigits = finalStr.padStart(slots.length,'0').split('').map(Number);
     const lastShown = slots.map(s => parseInt(s.querySelector('.digit')?.textContent || '0', 10) || 0);
 
-    // Phase A: random scramble (SNAP updates)
+    // Phase A: random scramble (SNAP updates only)
     const start = performance.now();
     const nextAt = slots.map(() => 0);
 
@@ -136,7 +124,7 @@
       else settle();
     })(performance.now());
 
-    // Phase B: last ticks slower, then final (SNAP)
+    // Phase B: last ticks slow down, then final (SNAP)
     function settle(){
       slots.forEach((slot, i) => {
         const final = finalDigits[i];
@@ -157,6 +145,7 @@
           delay += stepDur;
         });
       });
+
       const tail = Math.round(SETTLE_BASE * Math.pow(SETTLE_GROW, Math.max(SETTLE_TICKS,3)));
       setTimeout(() => setLabel(finalStr.padStart(2,'0')), tail + 40);
     }
@@ -165,26 +154,28 @@
   function update(){ shuffleTo(pad(computeDayUTC())); }
   function scheduleRollover(){ setTimeout(() => { update(); scheduleRollover(); }, msUntilNextUtcMidnight()); }
 
-  document.addEventListener('DOMContentLoaded', async () => {
-    injectStyle();
+  document.addEventListener('DOMContentLoaded', () => {
     const root = rootEl(); if (!root) return;
 
-    // force integer font-size to avoid fractional rasterization
+    // Singleton guard to prevent double init overlap
+    if (root.dataset.aubInit === '1') return;
+    root.dataset.aubInit = '1';
+
+    injectStyle();
+
+    // Force integer font-size to avoid fractional rasterization
     const cs = getComputedStyle(root);
     const fs = parseFloat(cs.fontSize);
     if (fs && Math.abs(fs - Math.round(fs)) > 0.01){ root.style.fontSize = Math.round(fs) + 'px'; }
 
-    measure(root);
-
-    const culprit = nearestTransformedAncestor(root);
-    if (culprit){ console.warn('[aub-day] Transformed ancestor can cause blur:', culprit); }
-
     const today = pad(computeDayUTC());
-    const slots = ensureSlots(today.length);
+    buildSlots(today.length);            // <- wipes static nodes and builds fresh
+    const slots = Array.from(root.querySelectorAll('.slot'));
     today.split('').forEach((d,i) => setDigit(slots[i], d));
     setLabel(today);
 
-    setTimeout(() => shuffleTo(today), 60); // show life once
+    measure(root);
+    setTimeout(() => shuffleTo(today), 60); // initial life
     scheduleRollover();
 
     let rt; window.addEventListener('resize', () => {
