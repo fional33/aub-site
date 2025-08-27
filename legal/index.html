@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<!-- BUILD: AUB-LEGAL v16 (neo-brutal single-file) -->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>AURA BYTE ($AUB) — LEGAL TERMS, RISK DISCLOSURE, AND USER AGREEMENT</title>
+<style>
+/* ==== palette & base ====================================================== */
+:root{
+  --bg:#0B0F14;           /* matte charcoal */
+  --fg:rgba(255,255,255,.92);
+  --accent:#7DD3FC;       /* primary blue */
+  --accent2:#C084FC;      /* accent lilac */
+  --rule:rgba(147,161,175,.70); /* utility gray 70% */
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  line-height:1.6;
+  /* scanlines */
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.045) 0, rgba(255,255,255,.045) 1px, transparent 2px, transparent 128px);
+  background-attachment: fixed;
+  /* subtle vertical drift */
+  animation: drift 18s linear infinite;
+}
+@keyframes drift { from{background-position:0 0} to{background-position:0 128px} }
+@media (prefers-reduced-motion: reduce){ body{ animation:none } }
+
+/* ==== layout ============================================================= */
+#status{
+  position:fixed; inset:0 auto auto 0; right:0; height:34px; z-index:50;
+  display:flex; align-items:center; justify-content:center; gap:.5rem;
+  border-bottom:1px solid var(--rule);
+  background:linear-gradient(180deg, rgba(125,211,252,.08), rgba(192,132,252,.08));
+  letter-spacing:.08em; text-transform:uppercase; font-weight:700; font-size:12px;
+}
+#status .tag{padding:0 10px}
+#status .tag::before{content:"<"; color:var(--accent)}
+#status .tag::after{content:">"; color:var(--accent2)}
+.wrap{max-width:760px;margin:68px auto 0; padding:0 20px}
+@media (min-width:1024px){
+  .grid{display:grid; grid-template-columns:260px 1fr; gap:28px}
+  nav.toc{position:sticky; top:68px; align-self:start; border-right:1px solid var(--rule); padding-right:18px; height:calc(100vh - 100px); overflow:auto}
+}
+nav.toc{display:none}
+@media (min-width:1024px){ nav.toc{display:block} }
+.toc h2{font-size:12px; margin:0 0 10px 0; letter-spacing:.1em}
+.toc a{display:block; text-decoration:none; color:var(--fg); padding:4px 0; font-size:13px}
+.toc a .sec{color:var(--accent)}
+.toc a.active{color:var(--accent2)}
+.toc a:hover{outline:1px dashed var(--accent); outline-offset:2px}
+.toc .sub{padding-left:12px; opacity:.86}
+
+/* mobile contents drawer */
+details#contents{border:1px solid var(--rule); padding:10px 12px; margin:0 0 18px 0}
+details#contents summary{cursor:pointer; letter-spacing:.08em}
+@media (min-width:1024px){ details#contents{display:none} }
+
+/* ==== typographic system ================================================= */
+h1,h2,h3{margin:0 0 12px 0; text-transform:uppercase; letter-spacing:.08em; font-weight:800}
+h1{font-size:20px; border-bottom:1px solid var(--rule); padding:12px 0; position:relative}
+h1 .sweep{
+  position:absolute; left:0; right:0; bottom:-1px; height:1px;
+  background:linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+  background-size:200% 100%; animation:sweep 36s linear infinite;
+}
+@keyframes sweep { from{background-position:0 0} to{background-position:200% 0} }
+@media (prefers-reduced-motion: reduce){ h1 .sweep{animation:none} }
+
+.section{margin:26px 0 22px 0; padding-bottom:14px; border-bottom:1px solid var(--rule)}
+h2{font-size:14px; display:flex; align-items:center; gap:8px}
+h2 .marker{font-weight:900; color:var(--accent); letter-spacing:.12em}
+h3{font-size:13px}
+p,li{font-size:15px;}
+
+/* paragraph numbering w/ hanging indents */
+.legal{counter-reset: para}
+.legal p{position:relative; padding-left:2.3rem; margin:12px 0}
+.legal p::before{
+  counter-increment: para;
+  content: counter(para) ".";
+  position:absolute; left:0; top:0; color:var(--rule); font-weight:700;
+}
+/* lists */
+ol{counter-reset:item; margin:12px 0 12px 2.3rem; padding:0}
+ol > li{display:block; position:relative; padding-left:.5rem; margin:8px 0}
+ol > li::before{counter-increment:item; content: counters(item, ".") "."; position:absolute; left:-2.3rem; color:var(--rule); font-weight:700}
+ul{list-style:none; margin:12px 0 12px 2.3rem; padding:0}
+ul > li::before{content:"—"; position:absolute; left:-2.3rem; color:var(--rule)}
+ul > li{position:relative; padding-left:.5rem; margin:8px 0}
+
+/* heading anchors */
+.anchor{margin-left:auto; text-decoration:none; font-size:13px; color:var(--accent2); opacity:.8}
+.anchor:hover{opacity:1; text-decoration:underline}
+
+/* right margin callouts placeholder (print-hidden) */
+aside.callouts{display:none}
+@media (min-width:1280px){
+  .grid{grid-template-columns:260px 1fr 180px}
+  aside.callouts{display:block; position:sticky; top:68px; height:calc(100vh - 100px); overflow:auto; border-left:1px solid var(--rule); padding-left:14px; font-size:12px}
+}
+
+/* footer lock */
+footer{margin:28px 0 40px 0}
+.hr{height:1px; background:rgba(125,211,252,.20); margin:18px 0 12px 0}
+.lock{ text-align:center; letter-spacing:.12em; font-weight:800; font-size:12px }
+.lock .brand{color:var(--accent)} .lock .wta{color:var(--accent2)}
+
+/* micro-glitch pulse on first paint */
+.glitch{position:relative}
+.glitch::after{
+  content:attr(data-text);
+  position:absolute; inset:0; left:1px; top:-1px; mix-blend-mode:screen;
+  color:var(--accent2); opacity:.0; animation:gl 0.5s steps(2,end) 1
+}
+@keyframes gl{0%{opacity:.8} 100%{opacity:0}}
+
+/* print */
+@media print{
+  #status, nav.toc, details#contents, aside.callouts, .hr{display:none!important}
+  body{background:#fff!important; color:#000!important}
+  a::after{content:" [" attr(href) "]"; font-size:11px; color:#000}
+  .legal p::before, ol>li::before{color:#000}
+  h1,h2,h3{text-shadow:none}
+}
+</style>
+</head>
+<body>
+<div id="status"><span class="tag" id="statusTag">&lt;SYNCED&gt;</span></div>
+
+<div class="wrap">
+  <h1 class="glitch" data-text="<AURA BYTE LEGAL>"><span>&lt;AURA BYTE LEGAL&gt;</span><i class="sweep"></i></h1>
+
+  <div style="font-size:12px; letter-spacing:.08em; margin:10px 0 22px 0; display:flex; gap:12px; flex-wrap:wrap">
+    <span>EFFECTIVE DATE: 2025-08-27</span>
+    <span>LAST UPDATED: 2025-08-27</span>
+    <span>JURISDICTION: ENGLAND &amp; WALES</span>
+  </div>
+
+  <details id="contents"><summary>CONTENTS</summary><div id="toc-mobile"></div></details>
+
+  <div class="grid">
+    <nav class="toc">
+      <h2>CONTENTS</h2>
+      <div id="toc"></div>
+    </nav>
+
+    <main id="main" class="legal">
+      <!-- Title line (as provided) -->
+      <section class="section">
+        <h2 id="s0"><span class="marker">§</span> Title <a class="anchor" href="#s0">§</a></h2>
+        <p><strong>AURA BYTE ($AUB) — LEGAL TERMS, RISK DISCLOSURE, AND USER AGREEMENT</strong></p>
+        <p><strong>Effective date:</strong> 2025-08-27<br>
+        <strong>Network:</strong> Solana<br>
+        <strong>Ticker:</strong> $AUB<br>
+        <strong>Official comms:</strong> The only canonical public updates and contract address are published on the official AURA BYTE account on X (formerly Twitter). No other channel is authoritative.</p>
+        <p><em>Important notice (read first).</em> By acquiring, holding, transferring, interacting with, or otherwise engaging with $AUB, you affirmatively agree to these Terms. If you do not agree, do not interact with $AUB or any related materials. These Terms include a binding arbitration agreement, class action waiver, and covenant not to sue (Sections 20–22). To the maximum extent permitted by law, you waive the right to bring or participate in lawsuits against the AURA BYTE Parties (defined below).</p>
+      </section>
+
+      <section class="section">
+        <h2 id="s1"><span class="marker">§1</span> 1) Definitions <a class="anchor" href="#s1">§</a></h2>
+        <p>“AURA BYTE,” “we,” “us,” “our”: the open project commonly referred to as Aura Byte / $AUB, including its code, websites, and public communications.</p>
+        <p>“$AUB”: the fungible token deployed on the Solana blockchain at the contract address posted in the pinned post/bio of the official AURA BYTE account on X.</p>
+        <p>“You,” “user”: any person or entity that views, references, purchases, sells, holds, transfers, or interacts with $AUB or related content.</p>
+        <p>“AURA BYTE Parties”: collectively and individually, any founder(s), developer(s), maintainer(s), contributor(s), community moderator(s), service provider(s), affiliate(s), advisor(s), or other person(s) or entity(ies) who create, publish, maintain, or assist the project, whether paid or unpaid, direct or indirect.</p>
+        <p>“Stages”: sequential public milestones (e.g., Stage 1 target of $0.05) and any follow-on phases publicly announced on X.</p>
+        <p>“Site”: any website or page that publishes these Terms on behalf of AURA BYTE.</p>
+      </section>
+
+      <section class="section"><h2 id="s2"><span class="marker">§2</span> 2) Acceptance of Terms <a class="anchor" href="#s2">§</a></h2><p>These Terms constitute a binding agreement between you and the AURA BYTE Parties. You accept them by any interaction with $AUB (including viewing official materials, on-chain interactions, or off-chain activities referencing $AUB).</p></section>
+
+      <section class="section"><h2 id="s3"><span class="marker">§3</span> 3) Eligibility; Sanctions; KYC/AML <a class="anchor" href="#s3">§</a></h2><p>You represent and warrant that you: (a) are at least 18 years old (or the age of majority in your jurisdiction); (b) are not located in, under the control of, or a national or resident of any sanctioned jurisdiction or on any sanctions list (e.g., OFAC, UK HMT, EU, UN); (c) are not prohibited by applicable law from acquiring or holding digital assets; and (d) will comply with all applicable KYC/AML and counter-terrorist financing laws. You are solely responsible for determining if your participation is legal where you live.</p></section>
+
+      <section class="section"><h2 id="s4"><span class="marker">§4</span> 4) No Offer, Solicitation, or Advice <a class="anchor" href="#s4">§</a></h2><p>All materials are for informational and entertainment purposes. Nothing herein is an offer to sell or a solicitation to buy securities or any regulated financial product. Nothing is investment, legal, accounting, or tax advice. You are solely responsible for your decisions. Consult qualified professionals as needed.</p></section>
+
+      <section class="section"><h2 id="s5"><span class="marker">§5</span> 5) Official Contract Authenticity (X is authoritative) <a class="anchor" href="#s5">§</a></h2><p>The only authentic $AUB contract address is the one posted on the official AURA BYTE account on X (bio and/or pinned post). Do not use addresses from search engines, third-party aggregators, DEX listings, private messages, or unofficial groups. The AURA BYTE Parties are not responsible for losses from interacting with fake or incorrect contracts, lookalike tokens, or phishing.</p></section>
+
+      <section class="section"><h2 id="s6"><span class="marker">§6</span> 6) Communications; No Babysitting <a class="anchor" href="#s6">§</a></h2><p>Official updates, stage announcements, and any reveals occur only on X. There is no official Telegram or Discord. We are not your babysitter; you are responsible for monitoring the official X account for updates. Impersonators and scammers often operate in chatrooms. Treat unsolicited DMs and groups as high risk.</p></section>
+
+      <section class="section"><h2 id="s7"><span class="marker">§7</span> 7) The Stage Program (Roadmap Mechanics) <a class="anchor" href="#s7">§</a></h2><p>$AUB progresses through public Stages.</p><p>Each Stage has a clearly stated goal/trigger (e.g., price target), posted on X.</p><p>Upon reaching a Stage trigger, Stage 2 (and subsequent phases, if any) may be deployed and announced on X with its new goal/feature/mission.</p><p>No forward-looking details or “previews” are binding unless posted on X at the time of deployment.</p></section>
+
+      <section class="section"><h2 id="s8"><span class="marker">§8</span> 8) Token Characteristics; No Expectation of Profit from Others <a class="anchor" href="#s8">§</a></h2><p>$AUB is a transactional/meme/community token with no intrinsic value and no guaranteed utility. Any “features” or “releases” may be experimental, non-custodial, and may change, be delayed, or be discontinued at any time. You should not purchase $AUB with an expectation of profits derived solely from the efforts of others.</p></section>
+
+      <section class="section"><h2 id="s9"><span class="marker">§9</span> 9) Technical and Smart-Contract Risks <a class="anchor" href="#s9">§</a></h2><p>Interacting with $AUB involves smart-contract risk and protocol risk, including but not limited to: bugs, exploits, admin key risks, MEV and sandwiching, slippage, oracle failure, chain congestion/outages, reorgs, forks, signer errors, and wallet compromise. Transactions are irreversible. You assume full responsibility for wallet security (private keys, seed phrase, hardware devices) and approvals.</p></section>
+
+      <section class="section"><h2 id="s10"><span class="marker">§10</span> 10) Market and Liquidity Risks <a class="anchor" href="#s10">§</a></h2><p>$AUB’s price may be extremely volatile or go to zero. Liquidity can disappear without notice. Third-party DEXs, aggregators, and pools are outside AURA BYTE Parties’ control. Past price action is not indicative of future results.</p></section>
+
+      <section class="section"><h2 id="s11"><span class="marker">§11</span> 11) Third-Party Services and Links <a class="anchor" href="#s11">§</a></h2><p>$AUB may be referenced by or interact with third-party services (exchanges, DEXs, wallets, explorers, analytics). Those services are not controlled by AURA BYTE Parties and are used at your own risk. We disclaim responsibility for third-party content, availability, security, pricing, or data accuracy.</p></section>
+
+      <section class="section"><h2 id="s12"><span class="marker">§12</span> 12) Taxes and Regulatory Compliance <a class="anchor" href="#s12">§</a></h2><p>You are solely responsible for all taxes (income, capital gains, VAT, GST, etc.) and any filings relating to your activities with $AUB. You must determine how digital assets are treated in your jurisdiction and ensure compliance.</p></section>
+
+      <section class="section"><h2 id="s13"><span class="marker">§13</span> 13) User Conduct <a class="anchor" href="#s13">§</a></h2><p>You will not: violate laws; engage in fraud, market manipulation, or wash trading; harass others; use malware/phishing; or impersonate AURA BYTE Parties. You are responsible for your statements and actions. The project may publicly denounce scams and impersonation.</p></section>
+
+      <section class="section"><h2 id="s14"><span class="marker">§14</span> 14) Community Content; IP; License <a class="anchor" href="#s14">§</a></h2><p>Community memes, edits, and derivatives around $AUB are generally permissive. AURA BYTE names, marks, slogans (including “WORSHIP THE AURA”), and visual assets may be referenced in good faith, non-misleading ways. You grant AURA BYTE Parties a non-exclusive, worldwide, royalty-free license to display/repost content you tag to the project, subject to removal upon reasonable request.</p></section>
+
+      <section class="section"><h2 id="s15"><span class="marker">§15</span> 15) Privacy; Analytics <a class="anchor" href="#s15">§</a></h2><p>Interactions with public blockchains are public. The Site may use privacy-preserving analytics. Do not share private keys or seed phrases. Do not sign transactions you do not understand.</p></section>
+
+      <section class="section"><h2 id="s16"><span class="marker">§16</span> 16) Modifications to Terms and Materials <a class="anchor" href="#s16">§</a></h2><p>We may update these Terms and any materials at any time by posting the revised version on the Site or linking it from the official X account. Changes are effective upon posting. Continued interaction with $AUB after changes constitutes acceptance.</p></section>
+
+      <section class="section"><h2 id="s17"><span class="marker">§17</span> 17) Disclaimers (No Warranties) <a class="anchor" href="#s17">§</a></h2><p>To the maximum extent permitted by law, all materials and $AUB are provided “as is” and “as available” without warranties of any kind (express, implied, or statutory), including merchantability, fitness for a particular purpose, title, non-infringement, error-free or uninterrupted operation, or accuracy of information.</p></section>
+
+      <section class="section"><h2 id="s18"><span class="marker">§18</span> 18) Limitation of Liability <a class="anchor" href="#s18">§</a></h2><p>To the maximum extent permitted by law, in no event shall any AURA BYTE Party be liable for any indirect, incidental, special, consequential, exemplary, punitive, or enhanced damages; loss of profits, revenue, goodwill, data; trading losses; or any damages exceeding the greater of: (a) the fiat value of US$100 or (b) the total fiat value you paid to acquire $AUB in the 30 days preceding the claim. Multiple claims do not expand this cap.</p></section>
+
+      <section class="section"><h2 id="s19"><span class="marker">§19</span> 19) Assumption of Risk; Release <a class="anchor" href="#s19">§</a></h2><p>You assume all risks associated with $AUB. To the maximum extent permitted by law, you release and forever discharge the AURA BYTE Parties from any and all claims, demands, causes of action, damages, losses, liabilities, costs, and expenses (including attorneys’ fees), whether known or unknown, suspected or unsuspected, disclosed or undisclosed, in law or in equity, arising out of or relating to $AUB, the Site, Stages, announcements, or third-party services.</p><p>If you are a California resident, you waive California Civil Code §1542 (and any similar statute elsewhere), which states that a general release does not extend to claims you do not know or suspect to exist at the time of release.</p></section>
+
+      <section class="section"><h2 id="s20"><span class="marker">§20</span> 20) Covenant Not to Sue; Waiver of Claims <a class="anchor" href="#s20">§</a></h2>
+        <p>To the maximum extent permitted by law, you covenant not to sue, commence, voluntarily aid, or participate in any action or proceeding (individual, class, collective, private attorney general, representative, derivative, arbitration, or otherwise) against any AURA BYTE Party arising out of or relating to:</p>
+        <ul>
+          <li>buying, selling, holding, receiving, sending, or interacting with $AUB;</li>
+          <li>price, liquidity, listings, delistings, or market behavior;</li>
+          <li>Stage design, announcements, timing, goals, or changes;</li>
+          <li>statements on X, the Site, or elsewhere;</li>
+          <li>hacks, exploits, downtime, forks, or smart-contract issues;</li>
+          <li>third-party services (wallets, DEXs, aggregators);</li>
+          <li>loss of private keys or approvals;</li>
+          <li>alleged misrepresentation, omission, negligence, gross negligence, strict liability, product liability, breach of contract, breach of duty, unjust enrichment, statutory claims, or any other legal or equitable theory.</li>
+        </ul>
+        <p>Where a complete covenant not to sue is not enforceable, you agree that your sole and exclusive remedy is the arbitration described below, subject to the liability limitations herein.</p>
+      </section>
+
+      <section class="section"><h2 id="s21"><span class="marker">§21</span> 21) Binding Arbitration Agreement <a class="anchor" href="#s21">§</a></h2>
+        <p><strong>Agreement to Arbitrate.</strong> Any dispute, claim, or controversy arising out of or relating to these Terms, $AUB, the Site, Stages, or AURA BYTE communications shall be resolved by final and binding arbitration on an individual basis.</p>
+        <p><strong>Institution &amp; Rules.</strong> Arbitration shall be administered by the LCIA (London Court of International Arbitration) under the LCIA Rules in effect when the notice of arbitration is filed.</p>
+        <p><strong>Seat &amp; Language.</strong> London, England is the seat. Proceedings in English.</p>
+        <p><strong>Confidentiality.</strong> The existence of, and all filings and awards in, any arbitration are confidential except to the extent disclosure is required to enforce an award or by law.</p>
+        <p><strong>Interim Relief.</strong> The tribunal may grant interim or injunctive relief.</p>
+        <p><strong>Time Limits.</strong> Any claim must be filed within one (1) year after the cause of action accrues; otherwise, it is permanently barred.</p>
+      </section>
+
+      <section class="section"><h2 id="s22"><span class="marker">§22</span> 22) Class/Collective Action Waiver; Jury Trial Waiver <a class="anchor" href="#s22">§</a></h2><p>You and the AURA BYTE Parties waive any right to have disputes heard or resolved as a class, collective, private attorney general, or representative action. The arbitrator shall have no authority to conduct such proceedings. To the maximum extent permitted by law, you also waive any right to a jury trial.</p></section>
+
+      <section class="section"><h2 id="s23"><span class="marker">§23</span> 23) Indemnification <a class="anchor" href="#s23">§</a></h2><p>You agree to defend, indemnify, and hold harmless the AURA BYTE Parties from and against any and all claims, damages, obligations, losses, liabilities, costs, and expenses (including reasonable attorneys’ fees) arising from: (a) your interaction with $AUB; (b) violation of these Terms or applicable law; (c) misuse of third-party services; or (d) your content or conduct.</p></section>
+
+      <section class="section"><h2 id="s24"><span class="marker">§24</span> 24) Governing Law <a class="anchor" href="#s24">§</a></h2><p>These Terms and any non-arbitrable issues are governed by the laws of England and Wales, without regard to conflicts of law rules, except that the arbitration provisions are governed by the UK Arbitration Act 1996 and LCIA Rules.</p></section>
+
+      <section class="section"><h2 id="s25"><span class="marker">§25</span> 25) Severability; Survival; Assignment; Waiver; Force Majeure <a class="anchor" href="#s25">§</a></h2><p>If any provision is held invalid or unenforceable, it shall be enforced to the maximum extent permissible and the remainder shall remain in effect. Sections 1, 3–5, 7–11, 16–25 survive termination. You may not assign these Terms without consent; AURA BYTE Parties may assign to an affiliate or successor. Failure to enforce is not a waiver. The AURA BYTE Parties are not liable for delays/failures due to events beyond reasonable control (force majeure), including changes to blockchain functionality.</p></section>
+
+      <section class="section"><h2 id="s26"><span class="marker">§26</span> 26) Notices; Contact; Updates <a class="anchor" href="#s26">§</a></h2><p>We will post updates and notices via the official AURA BYTE account on X and/or the Site. You are responsible for monitoring those postings. Do not rely on DMs or unofficial accounts.</p></section>
+
+      <section class="section"><h2 id="s27"><span class="marker">§27</span> 27) Entire Agreement <a class="anchor" href="#s27">§</a></h2><p>These Terms constitute the entire agreement between you and the AURA BYTE Parties regarding $AUB and supersede all prior or contemporaneous understandings relating to the subject matter.</p></section>
+
+      <section class="section"><h2 id="s28"><span class="marker">§28</span> 28) Acknowledgment and Consent <a class="anchor" href="#s28">§</a></h2><p>By acquiring, holding, transferring, or interacting with $AUB in any way, you (a) acknowledge that you have read and understood these Terms; (b) accept and agree to be bound by them; (c) assume all risks described herein; and (d) agree to the Release, Covenant Not to Sue, Arbitration Agreement, Class Action Waiver, Jury Trial Waiver, Indemnification, and Limitation of Liability to the maximum extent permitted by law.</p><p><strong>WORSHIP THE AURA.</strong></p></section>
+
+      <footer>
+        <div class="hr"></div>
+        <div class="lock"><span class="brand">&lt;AURA BYTE&gt;</span> — <span class="wta">WORSHIP THE AURA.</span></div>
+      </footer>
+    </main>
+
+    <aside class="callouts" aria-hidden="true">
+      <!-- Reserved for bracketed notes / definitions callouts if needed -->
+      <div style="opacity:.7">[NOTES]</div>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* minimal JS only; no frameworks */
+
+// TOC build
+(function(){
+  const main = document.getElementById('main');
+  const toc = document.getElementById('toc');
+  const tcm = document.getElementById('toc-mobile');
+  if(!main || !toc) return;
+  const hs = main.querySelectorAll('h2[id]');
+  const frag = document.createDocumentFragment();
+  const fragM = document.createDocumentFragment();
+  hs.forEach(h=>{
+    const id=h.id, txt=h.textContent.trim();
+    const a=document.createElement('a'); a.href="#"+id; a.innerHTML='<span class="sec">§</span> '+txt;
+    frag.appendChild(a.cloneNode(true));
+    fragM.appendChild(a);
+  });
+  toc.appendChild(frag);
+  if(tcm) tcm.appendChild(fragM);
+
+  // active highlight
+  const links = toc.querySelectorAll('a');
+  const obs = new IntersectionObserver((ents)=>{
+    ents.forEach(e=>{
+      const id = e.target.id;
+      const l = toc.querySelector('a[href="#'+id+'"]');
+      if(l){
+        if(e.isIntersecting) { links.forEach(x=>x.classList.remove('active')); l.classList.add('active'); }
+      }
+    })
+  },{rootMargin:"-40% 0px -55% 0px", threshold:0.01});
+  hs.forEach(h=>obs.observe(h));
+})();
+
+// heading anchors copy + status strip
+(function(){
+  const tag=document.getElementById('statusTag');
+  const set = (txt)=>{ if(tag){ tag.textContent=txt; } };
+  function copyLink(ev){
+    ev.preventDefault();
+    const href=this.getAttribute('href');
+    set('<DROPPING>');
+    history.pushState(null, '', href);
+    const url = location.href;
+    try{ navigator.clipboard && navigator.clipboard.writeText(url); }catch(e){}
+    set('<CONFIRMED>');
+    setTimeout(()=>set('<SYNCED>'), 1200);
+  }
+  document.querySelectorAll('a.anchor').forEach(a=>a.addEventListener('click', copyLink));
+  window.addEventListener('hashchange', ()=>{ set('<CONFIRMED>'); setTimeout(()=>set('<SYNCED>'), 1200); });
+})();
+
+// tiny parallax on scroll (scanline drift offset)
+(function(){
+  const baseY = 0;
+  let ticking=false;
+  window.addEventListener('scroll', ()=>{
+    if(ticking) return; ticking=true;
+    requestAnimationFrame(()=>{
+      const y = window.scrollY * 0.02 + baseY;
+      document.body.style.backgroundPosition = `0 ${y}px`;
+      ticking=false;
+    });
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>
