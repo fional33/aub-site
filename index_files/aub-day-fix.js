@@ -1,23 +1,23 @@
 (() => {
-  // ===== CONFIG (UTC launch) =====
+  // ===== LAUNCH DATE (UTC) =====
   const LAUNCH_UTC = new Date(
     document.querySelector('meta[name="aub-launch-utc"]')?.content
-    || (window.AUB_LAUNCH_UTC ?? '2025-08-25T00:00:00Z')
+      || (window.AUB_LAUNCH_UTC ?? '2025-08-25T00:00:00Z')
   );
 
   const root = document.querySelector('.aub-day-odometer');
   if (!root) return;
 
-  // Wipe any old markup to avoid double layers
+  // Clean out any previous markup so we don't double-render
   root.textContent = '';
   injectCSS(true);
 
-  // ---------- DOM ----------
+  // ---------- DOM builders ----------
   function buildReel() {
     const reel = document.createElement('span');
     reel.className = 'aub-reel';
-    // 2 loops of 0..9 so we can scroll past and land cleanly
-    for (let r = 0; r < 2; r++) {
+    // 3 loops of 0..9 so we can always scroll forward and land cleanly
+    for (let r = 0; r < 3; r++) {
       for (let d = 0; d < 10; d++) {
         const cell = document.createElement('span');
         cell.className = 'aub-cell';
@@ -28,6 +28,7 @@
         reel.appendChild(cell);
       }
     }
+    reel._y = 0; // current absolute offset in px
     return reel;
   }
 
@@ -40,138 +41,139 @@
       slot.appendChild(buildReel());
       root.prepend(slot);
     }
-    // Make sure each has a reel (in case of prior partial DOM)
+    // guarantee each has a reel
     slots = Array.from(root.querySelectorAll('.aub-slot'));
-    for (const s of slots) {
-      if (!s.querySelector('.aub-reel')) {
-        s.innerHTML = '';
-        s.appendChild(buildReel());
-      }
+    for (const s of slots) if (!s.querySelector('.aub-reel')) {
+      s.innerHTML = '';
+      s.appendChild(buildReel());
     }
     return slots;
   }
 
-  // ---------- Geometry helpers ----------
-  const cellHeightCache = new WeakMap();
+  // ---------- Geometry ----------
+  const hCache = new WeakMap();
   function cellH(slot) {
-    let h = cellHeightCache.get(slot);
+    let h = hCache.get(slot);
     if (!h) {
       const c = slot.querySelector('.aub-cell');
       h = Math.max(1, Math.round(c?.getBoundingClientRect().height || 0));
-      cellHeightCache.set(slot, h);
+      hCache.set(slot, h);
     }
     return h;
   }
 
-  function jumpToDigit(slot, digit) {
+  function setReel(slot, y, withTransition = false, dur = 0, ease = '') {
     const reel = slot.querySelector('.aub-reel');
     if (!reel) return;
-    const h = cellH(slot);
-    const off = Math.round(h * ((((digit % 10) + 10) % 10) + 10)); // snap to whole px
-    const prev = reel.style.transition;
-    reel.style.transition = 'none';
-    reel.style.transform = `translate3d(0, ${-off}px, 0)`;
-    // force style apply
-    reel.offsetHeight;
-    reel.style.transition = prev;
+    reel._y = y;
+    reel.style.transition = withTransition ? `transform ${dur}ms ${ease}` : 'none';
+    reel.style.transform = `translate3d(0, ${-Math.round(y)}px, 0)`;
   }
 
-  // ---------- Animation ----------
-  // Smooth, high-FPS rAF loop for Phase A (scramble), then 3 slow ticks (settle).
-  function scrambleThenReveal(targetStr) {
+  function snapToDigit(slot, digit) {
+    const h = cellH(slot);
+    // Land in the middle loop (index + 10) so we always have room to move forward
+    setReel(slot, h * (10 + ((digit % 10 + 10) % 10)));
+  }
+
+  // ---------- Motion: smooth scramble -> 3 soft ticks ----------
+  function animateTo(targetStr) {
     const slots = ensureSlots(targetStr.length);
-    const finalDigits = targetStr.padStart(slots.length, '0').split('').map(n => +n);
+    const final = targetStr.padStart(slots.length, '0').split('').map(n => +n);
 
-    // Randomize start to avoid “same numbers”
-    slots.forEach(s => jumpToDigit(s, Math.floor(Math.random() * 10)));
+    // (1) randomize start states & cache starting Y
+    const startY = new Array(slots.length);
+    for (let i = 0; i < slots.length; i++) {
+      const startDigit = Math.floor(Math.random() * 10);
+      snapToDigit(slots[i], startDigit);
+      startY[i] = slots[i].querySelector('.aub-reel')._y;
+    }
 
-    // PHASE A: continuous smooth scramble that decelerates
-    const A_MS = 700;                     // total scramble time (fast & smooth)
-    const t0   = performance.now();
+    // (2) compute forward targets (always increasing Y → always scrolls the same direction)
+    const targetY = new Array(slots.length);
+    for (let i = 0; i < slots.length; i++) {
+      const h = cellH(slots[i]);
+      const baseSpins = 10 - i * 1.5;           // fewer spins on leftmost
+      const jitter = 0.8 + Math.random() * 0.5; // per-slot variation
+      const extraDigits = Math.floor(Math.random() * 10);
+      const spins = Math.max(3, baseSpins * jitter);
+      targetY[i] = startY[i] + h * (spins * 10 + extraDigits);
+    }
+
+    // (3) scramble: time-based lerp from startY -> targetY with smooth deceleration
+    const A_MS = 700;
     const easeOut = t => 1 - Math.pow(1 - t, 3);
+    const t0 = performance.now();
+    root.classList.add('is-anim');
 
-    root.classList.add('is-anim');        // enables will-change only while animating
-
-    function tick(now) {
+    function scramble(now) {
       const t = Math.min(1, (now - t0) / A_MS);
-      const v = easeOut(t);               // 0→1, slows toward the end
-
+      const v = easeOut(t);
       for (let i = 0; i < slots.length; i++) {
-        const slot = slots[i];
-        const reel = slot.querySelector('.aub-reel');
-        if (!reel) continue;
-        const h = cellH(slot);
-
-        // Per-slot randomization so reels don’t sync
-        const baseSpin = 12 - i * 2;      // fewer spins for leftmost
-        const jitter   = 0.8 + Math.random() * 0.4;
-        const spins    = (baseSpin * (1 - v) + 1) * jitter; // decelerate
-        const px       = Math.round(h * (10 + spins));      // always ≥ one full loop
-
-        // No CSS transitions here; pure transform for max FPS
-        reel.style.transition = 'none';
-        reel.style.transform  = `translate3d(0, ${-px}px, 0)`;
+        const y = startY[i] + (targetY[i] - startY[i]) * v;
+        setReel(slots[i], y, false);
       }
-      if (t < 1) requestAnimationFrame(tick);
+      if (t < 1) requestAnimationFrame(scramble);
       else settle();
     }
 
+    // (4) settle: three soft ticks to the final digits
     function settle() {
-      // PHASE B: three gentle ticks into the final number
-      // Uses short transitions to give that satisfying “tick… tick… reveal”
       const TICKS = 3;
-      const STEP  = 120; // ms between tick starts
+      const STEP = 120; // ms between tick starts
       for (let i = 0; i < slots.length; i++) {
         const slot = slots[i];
         const reel = slot.querySelector('.aub-reel');
-        if (!reel) continue;
+        const h = cellH(slot);
+        const fd = final[i];
 
-        const fd = finalDigits[i];
-        for (let k = 0; k <= TICKS; k++) {
+        // compute absolute Y for each tick (always forward, then final)
+        const seq = [];
+        for (let k = TICKS; k >= 0; k--) {
           const d = (fd - (TICKS - k) + 20) % 10;
-          const delay = Math.round(STEP * (k + 1) * (1 + i * 0.08));
+          seq.push(h * (10 + d));
+        }
+
+        seq.forEach((y, idx) => {
+          const delay = Math.round(STEP * (idx + 1) * (1 + i * 0.07));
           setTimeout(() => {
-            const h   = cellH(slot);
-            const off = Math.round(h * (10 + d));
-            reel.style.transition = `transform ${120 + k * 30}ms cubic-bezier(.18,.9,.14,1)`;
-            reel.style.transform  = `translate3d(0, ${-off}px, 0)`;
-            if (k === TICKS && i === slots.length - 1) {
-              // turn off will-change once the very last tick completes
-              setTimeout(() => root.classList.remove('is-anim'), 180);
+            // small, snappy, non-janky transition
+            setReel(slot, y, true, 110 + idx * 30, 'cubic-bezier(.18,.9,.14,1)');
+            if (i === slots.length - 1 && idx === seq.length - 1) {
+              setTimeout(() => root.classList.remove('is-anim'), 160);
             }
           }, delay);
-        }
+        });
       }
     }
 
-    requestAnimationFrame(tick);
+    requestAnimationFrame(scramble);
   }
 
   // ---------- Day logic ----------
-  const daySinceLaunch = () => Math.max(0,
-    Math.floor((Date.now() - LAUNCH_UTC.getTime()) / 86400000)
-  );
+  const daySinceLaunch = () =>
+    Math.max(0, Math.floor((Date.now() - LAUNCH_UTC.getTime()) / 86400000));
 
   function updateDay() {
     const n = daySinceLaunch();
     const label = String(n).padStart(2, '0');
     root.setAttribute('aria-label', `DAY ${label}`);
-    scrambleThenReveal(label);
+    animateTo(label);
   }
 
   updateDay();
-  // UTC midnight rollover
-  (function scheduleMidnight() {
+  (function scheduleMidnightUTC() {
     const n = new Date();
     const next = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1, 0, 0, 0));
     setTimeout(() => { updateDay(); setInterval(updateDay, 86400000); }, next - n);
   })();
 
-  // ---------- Debug helpers in console ----------
-  window.AUB_SHUFFLE = (n) => scrambleThenReveal(String(n).padStart(2, '0'));
-  window.AUB_TUNE    = (em) => root.style.setProperty('--aub-glyph-nudge', `${em}em`);
+  // ---------- Console helpers ----------
+  window.AUB_SHUFFLE = (n) => animateTo(String(n).padStart(2, '0'));
+  window.AUB_TUNE_Y  = (em) => root.style.setProperty('--aub-y-nudge', `${em}em`);
+  window.AUB_TUNE_X  = (em) => root.style.setProperty('--aub-x-nudge', `${em}em`);
 
-  // ---------- Styles (movement only; no overlay halves) ----------
+  // ---------- Styles (centered + crisp, no overlays) ----------
   function injectCSS(force=false) {
     const old = document.getElementById('aub-odo-css');
     if (force && old) old.remove();
@@ -179,31 +181,33 @@
 
     const css = `
 .aub-day-odometer{
-  display:inline-flex; gap:.06em; align-items:center;
+  display:inline-flex; gap:.075em; align-items:center;
   font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
-  --aub-glyph-nudge:-0.08em; /* tweak with AUB_TUNE(x) if seam looks off */
+  --aub-y-nudge:-0.06em;          /* vertical seam tune, tweak via AUB_TUNE_Y(x)  */
+  --aub-x-nudge:0em;              /* horizontal centering tweak via AUB_TUNE_X(x) */
 }
 .aub-slot{
-  position:relative; display:inline-block; width:.49em; height:.88em;
-  overflow:hidden; border-radius:.12em; background:#000; isolation:isolate;
-  /* minimal shadow; no blurs that would smear glyphs */
+  position:relative; display:inline-block;
+  width:1.05ch; height:1.8ch;     /* ch ties to the “0” glyph width → strong centering */
+  overflow:hidden; border-radius:.16em; background:#000; isolation:isolate;
   filter:drop-shadow(0 2px 8px rgba(0,0,0,.35));
 }
-.aub-slot::after{ /* thin seam line only */
+.aub-slot::after{ /* subtle seam only */
   content:""; position:absolute; left:0; right:0; top:50%; height:1px;
   background:rgba(255,255,255,.05); pointer-events:none;
 }
-.aub-reel{
-  display:block; transform:translate3d(0,0,0);
-}
-.is-anim .aub-reel{ will-change:transform; } /* will-change only while moving */
+.aub-reel{ display:block; transform:translate3d(0,0,0); }
+.is-anim .aub-reel{ will-change:transform; }  /* only while moving → avoids budget warning */
 .aub-cell{
   display:flex; align-items:center; justify-content:center;
-  width:100%; height:1em; overflow:visible !important;
-  font-weight:800; font-size:1.16em; line-height:1; color:#fff;
-  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  width:100%; height:1ch;         /* one digit tall per cell */
+  font-weight:800; font-size:1.7ch; line-height:1; color:#fff;
+  text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased;
 }
-.aub-glyph{ transform:translateY(var(--aub-glyph-nudge)); }
+.aub-glyph{
+  display:inline-block;
+  transform: translate(var(--aub-x-nudge), var(--aub-y-nudge));
+}
 `;
     const style = document.createElement('style');
     style.id = 'aub-odo-css';
@@ -211,3 +215,4 @@
     document.head.appendChild(style);
   }
 })();
+
