@@ -1,9 +1,30 @@
-// aub-day-fix.js — odometer day calc (UTC) + smooth rAF shuffle
+// aub-day-fix.js — 60fps continuous reel scroll + UTC day + midnight rollover
 (() => {
   const ROOT_SEL = '.aub-day-odometer';
   const MIN_DIGITS = 2;
 
-  // --- Launch date (UTC) ---
+  // ---------- Inject minimal CSS for crisp, smooth reels ----------
+  const CSS_ID = 'aub-odo-css';
+  if (!document.getElementById(CSS_ID)) {
+    const css = document.createElement('style');
+    css.id = CSS_ID;
+    css.textContent = `
+      ${ROOT_SEL} {
+        display:inline-flex; gap:.06em; align-items:center;
+        font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;
+      }
+      ${ROOT_SEL} .slot {
+        position:relative; display:inline-block; overflow:hidden;
+        height:1em; width:.66em; /* width can be adjusted in your site CSS */
+      }
+      ${ROOT_SEL} .reel { position:absolute; left:0; top:0; will-change: transform; transform:translate3d(0,0,0); }
+      ${ROOT_SEL} .digit { height:1em; line-height:1em; text-align:center; }
+      ${ROOT_SEL}.is-scrambling .digit { pointer-events:none; }
+    `;
+    document.head.appendChild(css);
+  }
+
+  // ---------- Launch date (UTC) ----------
   function readLaunchUTC() {
     const meta = document.querySelector('meta[name="aub-launch-utc"]');
     const s = (meta && meta.content) || window.AUB_LAUNCH_UTC || '2025-08-25T00:00:00Z';
@@ -12,184 +33,181 @@
   }
   const LAUNCH_UTC = readLaunchUTC();
 
-  // --- Day math in UTC (1-based: launch day = 01) ---
-  const dayIndexUTC = (d) =>
-    Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 86400000);
-
+  // ---------- Day math in UTC (1-based) ----------
+  const dayIndexUTC = d => Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 86400000);
   function currentDayNumber() {
     const today = new Date();
-    const diff = Math.max(0, dayIndexUTC(today) - dayIndexUTC(LAUNCH_UTC)) + 1;
-    return diff;
+    return Math.max(0, dayIndexUTC(today) - dayIndexUTC(LAUNCH_UTC)) + 1;
   }
-
   function msUntilNextUtcMidnight() {
     const now = new Date();
     const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
     return next - now;
   }
 
-  // --- DOM helpers ---
-  function getRoot() {
-    return document.querySelector(ROOT_SEL);
-  }
+  // ---------- Structure (reel-based, continuous scroll) ----------
+  const N_REPEAT = 4; // 0..9 repeated this many times in each reel
+  function buildSlots(root, count) {
+    // First-time init: remove any static text to avoid overlays/blur
+    root.classList.add('aub-odo-ready');
+    root.replaceChildren();
 
-  function ensureSlots(root, count) {
-    let slots = Array.from(root.querySelectorAll('.slot'));
-    // Create a first slot if none exists
-    if (!slots.length) {
-      const s = document.createElement('span');
-      s.className = 'slot';
-      s.textContent = '0';
-      root.appendChild(s);
-      slots = [s];
-    }
-    // Grow to desired count
-    while (slots.length < count) {
-      const clone = slots[0].cloneNode(true);
-      clone.textContent = '0';
-      root.prepend(clone);
-      slots = Array.from(root.querySelectorAll('.slot'));
-    }
-    // Trim extras
-    while (slots.length > count) {
-      const el = slots.shift();
-      el.remove();
+    const slots = [];
+    for (let i = 0; i < count; i++) {
+      const slot = document.createElement('span');
+      slot.className = 'slot';
+      const reel = document.createElement('div');
+      reel.className = 'reel';
+      for (let r = 0; r < N_REPEAT; r++) {
+        for (let d = 0; d < 10; d++) {
+          const div = document.createElement('div');
+          div.className = 'digit';
+          div.textContent = d;
+          reel.appendChild(div);
+        }
+      }
+      slot.appendChild(reel);
+      // State for smooth animation
+      slot._pos = Math.random() * 10; // fractional current digit position
+      slot._start = slot._pos;
+      slot._end = slot._pos;
+      slot._t0 = 0;
+      slot._t1 = 0;
+      slot._delay = 0;
+      slots.push(slot);
+      root.appendChild(slot);
     }
     return slots;
   }
 
-  function setDigits(root, n) {
-    const str = String(n).padStart(MIN_DIGITS, '0');
-    const slots = ensureSlots(root, str.length);
-    for (let i = 0; i < slots.length; i++) {
-      slots[i].textContent = str[i];
-    }
+  function ensureSlots(root, count) {
+    let slots = Array.from(root.querySelectorAll('.slot'));
+    if (!slots.length) return buildSlots(root, count);
+
+    // If existing count differs, rebuild cleanly (prevents overlap artifacts)
+    if (slots.length !== count) return buildSlots(root, count);
+    return slots;
   }
 
-  // --- Smooth movement engine: random scramble → decel settle ---
-  // Keep old API: one argument (target)
-  function shuffleTo(targetNumber) {
-    const root = getRoot();
-    if (!root) return;
+  function measureDigitHeight(root) {
+    const probe = root.querySelector('.digit');
+    let h = probe ? probe.getBoundingClientRect().height : 0;
+    if (!h || h < 1) {
+      // Fallback to font-size estimate
+      const fs = parseFloat(getComputedStyle(root).fontSize) || 16;
+      h = fs * 1.0;
+    }
+    return h;
+  }
 
-    const CFG = {
-      SCRAMBLE_MS: 900,   // total random phase time
-      MIN_INTERVAL: 20,   // fastest random tick (ms)
-      MAX_INTERVAL: 85,   // slowest random tick (ms) near the end
-      JITTER_MS: 18,      // per-lane small randomness
-      LAST_TICKS: 4,      // 3 pre-final + final
-      FINAL_TICK_BASE: 70,
-      FINAL_TICK_GROW: 1.45,
-      LANE_DELAY: 22      // slight cascade per digit
-    };
+  function setReel(slot, pos, digitH) {
+    // pos: continuous digit index (0..∞), use modulo 10 for offset
+    const y = -((pos % 10 + 10) % 10) * digitH;
+    const reel = slot.firstChild;
+    reel.style.transform = `translate3d(0, ${y}px, 0)`;
+    slot._pos = pos;
+  }
+
+  // ---------- Easing ----------
+  const easeOutQuint = t => 1 - Math.pow(1 - t, 5);  // very smooth decel
+  const easeOutExpo  = t => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
+
+  // ---------- Main animation (continuous scrolling) ----------
+  function spinTo(targetNumber) {
+    const root = document.querySelector(ROOT_SEL);
+    if (!root) return;
 
     const prefersReduced =
       window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const finalStr = String(targetNumber).padStart(MIN_DIGITS, '0');
+    const digits = finalStr.length;
+
+    const slots = ensureSlots(root, digits);
+    const digitH = measureDigitHeight(root);
+
     if (prefersReduced) {
-      setDigits(root, targetNumber);
+      // Jump to final, no motion
+      for (let i = 0; i < digits; i++) {
+        const d = +finalStr[i];
+        setReel(slots[i], d, digitH);
+      }
+      root.setAttribute('aria-label', 'DAY ' + finalStr);
       return;
     }
-
-    const finalStr = String(targetNumber);
-    const digits = Math.max(MIN_DIGITS, finalStr.length);
-    const slots = ensureSlots(root, digits);
-    const finals = finalStr.padStart(digits, '0').split('').map(x => +x);
 
     root.classList.add('is-scrambling');
     root.classList.remove('is-final');
 
-    const shown = new Int8Array(digits);
-    const nextTickAt = new Float64Array(digits);
-    const settleTimes = new Array(digits);
-    const t0 = performance.now();
-    const easeOutExpo = t => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
+    // Config tuned for smooth, high-FPS motion
+    const CFG = {
+      DURATION: 1100,       // total duration per digit
+      CYCLES_BASE: 8,       // base full rotations
+      CYCLES_SPREAD: 6,     // randomness per slot
+      DELAY_PER_SLOT: 70,   // cascade across digits (ms)
+      EASE: easeOutQuint
+    };
 
+    const now = performance.now();
     for (let i = 0; i < digits; i++) {
-      const cur = parseInt(slots[i].textContent, 10);
-      shown[i] = Number.isFinite(cur) ? (cur % 10) : 0;
-      nextTickAt[i] = t0 + Math.random() * 40 + i * 10;
+      const slot = slots[i];
+      const curDigit = Math.round(slot._pos) % 10;
+      const finalDigit = +finalStr[i];
+
+      // total travel = full cycles + diff to land on final
+      const diff = (finalDigit - curDigit + 10) % 10;
+      const cycles = CFG.CYCLES_BASE + Math.floor(Math.random() * (CFG.CYCLES_SPREAD + 1)) + i; // slight increase on the left
+      const travel = cycles * 10 + diff + Math.random() * 0.35; // tiny fractional variety
+
+      slot._start = slot._pos;
+      slot._end   = slot._pos + travel;
+      slot._delay = i * CFG.DELAY_PER_SLOT + Math.random() * 25;
+      slot._t0    = now + slot._delay;
+      slot._t1    = slot._t0 + CFG.DURATION;
     }
 
-    // Precompute settle schedule
-    for (let i = 0; i < digits; i++) {
-      let acc = t0 + CFG.SCRAMBLE_MS + i * CFG.LANE_DELAY;
-      const seq = [];
-      for (let k = 0; k < CFG.LAST_TICKS - 1; k++) {
-        acc += (k === 0 ? CFG.FINAL_TICK_BASE : CFG.FINAL_TICK_BASE * Math.pow(CFG.FINAL_TICK_GROW, k));
-        seq.push({ when: acc, final: false });
+    // rAF loop — updates are transform-only (GPU), so it’s buttery smooth
+    function tick(t) {
+      let allDone = true;
+      for (let i = 0; i < digits; i++) {
+        const slot = slots[i];
+        const { _t0, _t1 } = slot;
+
+        if (t < _t0) { allDone = false; continue; }
+        const p = Math.min(1, (t - _t0) / (Math.max(16, _t1 - _t0)));
+        const eased = CFG.EASE(p);
+        const pos = slot._start + (slot._end - slot._start) * eased;
+        setReel(slot, pos, digitH);
+        if (p < 1) allDone = false;
       }
-      acc += CFG.FINAL_TICK_BASE * Math.pow(CFG.FINAL_TICK_GROW, CFG.LAST_TICKS - 1);
-      seq.push({ when: acc, final: true });
-      settleTimes[i] = seq;
+      if (!allDone) {
+        requestAnimationFrame(tick);
+      } else {
+        root.classList.remove('is-scrambling');
+        root.classList.add('is-final');
+      }
     }
+    requestAnimationFrame(tick);
 
-    let phase = 'scramble';
-
-    function frame(now) {
-      if (phase === 'scramble') {
-        const t = Math.min(1, (now - t0) / CFG.SCRAMBLE_MS);
-        const eased = easeOutExpo(t);
-        const interval = CFG.MIN_INTERVAL + (CFG.MAX_INTERVAL - CFG.MIN_INTERVAL) * eased;
-
-        for (let i = 0; i < digits; i++) {
-          if (now >= nextTickAt[i]) {
-            let r;
-            do { r = (Math.random() * 10) | 0; } while (r === shown[i]);
-            shown[i] = r;
-            slots[i].textContent = String(r);
-            nextTickAt[i] = now + interval + Math.random() * CFG.JITTER_MS + i * 2;
-          }
-        }
-        if (t >= 1) phase = 'settle';
-      }
-
-      if (phase === 'settle') {
-        let allDone = true;
-        for (let i = 0; i < digits; i++) {
-          const seq = settleTimes[i];
-          while (seq.length && now >= seq[0].when) {
-            const step = seq.shift();
-            let v;
-            if (step.final) {
-              v = finals[i];
-            } else {
-              do { v = (Math.random() * 10) | 0; } while (v === shown[i] || v === finals[i]);
-            }
-            if (v !== shown[i]) {
-              shown[i] = v;
-              slots[i].textContent = String(v);
-            }
-          }
-          if (seq.length) allDone = false;
-        }
-        if (allDone) {
-          root.classList.remove('is-scrambling');
-          root.classList.add('is-final');
-          return;
-        }
-      }
-      requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
+    // ARIA label for screen readers
+    root.setAttribute('aria-label', 'DAY ' + finalStr);
   }
 
-  // Expose for console testing
+  // Expose old API name for console tests
+  function shuffleTo(n) { spinTo(n); }
   window.AUB_SHUFFLE = shuffleTo;
 
-  // --- Boot: compute "DAY NN", animate now, and schedule UTC rollover ---
+  // ---------- Boot: compute and animate, schedule UTC rollover ----------
   function updateDay() {
-    const root = getRoot();
+    const root = document.querySelector(ROOT_SEL);
     if (!root) return;
     const day = currentDayNumber();
-    root.setAttribute('aria-label', 'DAY ' + String(day).padStart(2, '0'));
-    shuffleTo(day);
+    spinTo(day);
   }
 
   function boot() {
-    const root = getRoot();
+    const root = document.querySelector(ROOT_SEL);
     if (!root) return;
     updateDay();
-
     const delay = msUntilNextUtcMidnight() + 200;
     setTimeout(() => {
       updateDay();
