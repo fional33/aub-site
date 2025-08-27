@@ -1,89 +1,144 @@
 <!doctype html>
 <html lang="en">
-<!-- BUILD: AUB-LEGAL v17 (single-file, no-TOC, wide) -->
+<!-- BUILD: AUB-LEGAL v18 (aurora-bg, no-TOC, epic footer) -->
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AURA BYTE ($AUB) — LEGAL TERMS</title>
-<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark light" />
+<title>AURA BYTE ($AUB) — LEGAL TERMS, RISK DISCLOSURE, AND USER AGREEMENT</title>
 <style>
-/* ===== palette ===== */
+/* ====== Palette ====== */
 :root{
-  --bg:#0B0F14;
-  --fg:rgba(255,255,255,.94);
-  --muted:rgba(200,205,215,.78);
-  --rule:rgba(147,161,175,.70);
-  --a:#7DD3FC;  /* cyan accent */
-  --b:#C084FC;  /* lilac accent */
+  --bg:#0B0F14;                      /* matte charcoal */
+  --fg:rgba(255,255,255,.94);        /* primary text */
+  --muted:rgba(200,205,215,.78);     /* secondary */
+  --rule:rgba(147,161,175,.55);      /* dividers */
+  --c1:#7DD3FC;                      /* cyan */
+  --c2:#C084FC;                      /* lilac */
 }
-/* ===== base ===== */
+
+/* ====== Reset / Base ====== */
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   margin:0; color:var(--fg); background:var(--bg);
   font-family: ui-serif, Charter, Georgia, "Times New Roman", Times, serif;
-  line-height:1.6; letter-spacing:.005em; text-rendering:optimizeLegibility;
-  /* subtle depth: vignettes + faint grid */
-  background-image:
-    radial-gradient(70vw 70vw at 15% -10%, #59e6ff12 0%, transparent 60%),
-    radial-gradient(60vw 60vw at 100% 0%, #c6a7ff14 0%, transparent 60%),
-    linear-gradient(#ffffff10 1px, transparent 1px),
-    linear-gradient(90deg, #ffffff10 1px, transparent 1px);
-  background-size:auto, auto, 44px 44px, 44px 44px;
-  background-attachment:fixed,fixed,fixed,fixed;
+  line-height:1.65; letter-spacing:.005em; text-rendering:optimizeLegibility;
 }
-main{max-width:1040px; margin:0 auto; padding:72px 20px 56px;}
-h1,h2{margin:0 0 12px 0; font-weight:800; letter-spacing:.03em}
-h1{
-  font-size:2.2rem; padding-bottom:12px; border-bottom:1px solid var(--rule);
-  text-transform:none;
+
+/* ====== Animated Aurora Background (no squares) ====== */
+.aurora{
+  position:fixed; inset:-20vmax; z-index:-1; pointer-events:none; filter: blur(28px) saturate(120%);
+  background:
+    radial-gradient(40vmax 40vmax at 15% 20%, rgba(125,211,252,.22), transparent 60%),
+    radial-gradient(45vmax 45vmax at 85% 15%, rgba(192,132,252,.20), transparent 65%),
+    radial-gradient(50vmax 50vmax at 30% 85%, rgba(125,211,252,.18), transparent 60%),
+    radial-gradient(55vmax 55vmax at 80% 80%, rgba(192,132,252,.17), transparent 65%);
+  animation: drift1 36s linear infinite alternate, drift2 54s ease-in-out infinite alternate-reverse;
+  opacity:.9;
 }
+@keyframes drift1 { from{transform:translate3d(-2%, -1%, 0) rotate(0.5deg)} to{transform:translate3d(2%, 1%, 0) rotate(-0.5deg)} }
+@keyframes drift2 { from{background-position:0% 0%, 100% 0%, 0% 100%, 100% 100%} to{background-position:10% 6%, 92% 8%, 6% 92%, 88% 90%} }
+@media (prefers-reduced-motion: reduce){ .aurora{ animation:none } }
+
+/* ====== Layout ====== */
+main{max-width:1100px; margin:0 auto; padding:88px 22px 72px}
+header.hero{ text-align:center; margin-bottom:38px }
+.hero h1{
+  font-weight:900; letter-spacing:.02em; margin:0 0 12px 0;
+  font-size: clamp(2.2rem, 4.6vw, 4.2rem);
+  line-height:1.1;
+  background: linear-gradient(90deg, var(--c1), var(--c2), var(--c1));
+  background-size: 220% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation: titleSweep 10s linear infinite;
+  text-shadow:
+    0 0 0.01em rgba(255,255,255,.35),
+    0 0 0.35em rgba(125,211,252,.25),
+    0 0 0.55em rgba(192,132,252,.22);
+}
+@keyframes titleSweep { from{background-position:0% 50%} to{background-position:200% 50%} }
+.hero .meta{
+  color:var(--muted); font-size:0.98rem;
+  display:flex; flex-wrap:wrap; gap:10px 16px; justify-content:center;
+  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);
+  padding:10px 12px; margin-top:10px;
+}
+
+/* ====== Body Typography ====== */
+article{max-width: 1000px; margin:0 auto}
 h2{
-  font-size:1.05rem; text-transform:none; letter-spacing:.03em;
-  margin-top:28px;
+  margin:28px 0 6px; font-size:1.08rem; font-weight:800; letter-spacing:.02em;
+  text-transform:none; color:#fff;
 }
-.header-meta{color:var(--muted); font-size:.95rem; margin:8px 0 20px 0}
-.section{margin-top:12px}
-p,li{font-size:1.02rem}
+p, li{font-size:1.05rem}
 ul{padding-left:1.2rem}
-a{color:#bfe6ff; text-decoration:none; border-bottom:1px dotted #3a4a58}
+.section{margin-top:12px}
+a{color:#bfe6ff; text-decoration:none; border-bottom:1px dotted rgba(191,230,255,.55)}
 a:hover{text-decoration:underline}
 
-/* banner */
-footer{margin-top:40px; padding-top:20px; border-top:1px solid var(--rule)}
-.banner{display:flex; align-items:center; justify-content:center; padding:36px 8px 44px}
-.banner span{
-  font-weight:900; letter-spacing:.10em; font-size:1.4rem;
-  background:linear-gradient(90deg,var(--a),var(--b),var(--a));
-  background-size:200% 100%;
-  -webkit-background-clip:text; background-clip:text; color:transparent;
-  animation:aura 5s linear infinite;
-}
-@keyframes aura{from{background-position:0% 50%} to{background-position:200% 50%}}
-@media (prefers-reduced-motion: reduce){ .banner span{animation:none} }
+/* ====== Dividers ====== */
+hr{border:none; height:1px; background:var(--rule); margin:26px 0}
 
-/* print: remove backgrounds/animation; high contrast */
+/* ====== Footer: EPIC "WORSHIP THE AURA" ====== */
+footer{ margin-top:52px }
+.wta-wrap{
+  position:relative; overflow:hidden; border-top:1px solid var(--rule); padding-top:22px;
+}
+.wta{
+  margin:28px auto 10px; text-align:center;
+  font-weight:1000; letter-spacing:.18em;
+  font-size: clamp(1.8rem, 6.5vw, 5.2rem);
+  line-height:1.05;
+  background:
+    linear-gradient(90deg, rgba(125,211,252,1), rgba(192,132,252,1), rgba(125,211,252,1));
+  background-size: 250% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation: wtaSweep 5.2s linear infinite;
+  text-shadow:
+    0 0 0.02em rgba(255,255,255,.35),
+    0 0 0.5em rgba(125,211,252,.35),
+    0 0 1.2em rgba(192,132,252,.28);
+}
+@keyframes wtaSweep { from{background-position:0% 50%} to{background-position:200% 50%} }
+
+/* halo lines */
+.wta-wrap::before,.wta-wrap::after{
+  content:""; position:absolute; left:-15vw; right:-15vw; height:2px;
+  background: linear-gradient(90deg, transparent, rgba(125,211,252,.45), rgba(192,132,252,.45), transparent);
+  filter: blur(0.4px);
+}
+.wta-wrap::before{ top:10px; }
+.wta-wrap::after{ bottom:6px; }
+
+/* subtle single entrance pulse, no loop */
+@media (prefers-reduced-motion: no-preference){
+  .wta{ animation: wtaSweep 5.2s linear infinite, wtaPulse 800ms ease-out 1; }
+  @keyframes wtaPulse { 0%{letter-spacing:.28em; filter: brightness(1.2)} 100%{letter-spacing:.18em; filter:none} }
+}
+
+/* ====== Print Styles ====== */
 @media print{
+  .aurora{display:none!important}
   body{background:#fff!important; color:#000!important}
   main{padding:0; max-width:none}
-  .banner{display:none!important}
+  .hero h1{color:#000!important; background:none!important; text-shadow:none!important}
   a{color:#000!important; text-decoration:underline}
 }
-
-/* accessibility */
-:focus-visible{outline:2px dashed var(--a); outline-offset:2px}
+:focus-visible{outline:2px dashed var(--c1); outline-offset:2px}
 </style>
 </head>
 <body>
+<div class="aurora" aria-hidden="true"></div>
+
 <main>
-  <header class="header">
+  <header class="hero">
     <h1>AURA BYTE ($AUB) — LEGAL TERMS, RISK DISCLOSURE, AND USER AGREEMENT</h1>
-    <div class="header-meta">
-      <strong>Effective date:</strong> 2025-08-27 &nbsp;•&nbsp;
-      <strong>Network:</strong> Solana &nbsp;•&nbsp;
-      <strong>Ticker:</strong> $AUB
-      <br>
-      <strong>Official comms:</strong> The only canonical public updates and contract address are published on the official AURA BYTE account on X (formerly Twitter). No other channel is authoritative.
+    <div class="meta">
+      <span><strong>Effective date:</strong> 2025-08-27</span>
+      <span><strong>Network:</strong> Solana</span>
+      <span><strong>Ticker:</strong> $AUB</span>
+      <span><strong>Official comms:</strong> The only canonical public updates and contract address are published on the official AURA BYTE account on X (formerly Twitter). No other channel is authoritative.</span>
     </div>
   </header>
 
@@ -200,11 +255,13 @@ footer{margin-top:40px; padding-top:20px; border-top:1px solid var(--rule)}
 
     <h2>28) Acknowledgment and Consent</h2>
     <p>By acquiring, holding, transferring, or interacting with $AUB in any way, you (a) acknowledge that you have read and understood these Terms; (b) accept and agree to be bound by them; (c) assume all risks described herein; and (d) agree to the Release, Covenant Not to Sue, Arbitration Agreement, Class Action Waiver, Jury Trial Waiver, Indemnification, and Limitation of Liability to the maximum extent permitted by law.</p>
-
-    <footer>
-      <div class="banner"><span>WORSHIP THE AURA</span></div>
-    </footer>
   </article>
+
+  <footer>
+    <div class="wta-wrap">
+      <div class="wta">WORSHIP THE AURA</div>
+    </div>
+  </footer>
 </main>
 </body>
 </html>
