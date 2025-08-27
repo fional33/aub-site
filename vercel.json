@@ -1,63 +1,20 @@
 {
   "headers": [
     {
-      "source": "/legal",
+      "source": "/(.*)",
       "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://platform.twitter.comhttps://cdn.syndication.twimg.comstyle-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://.twimg.com https://pbs.twimg.comconnect-src 'self' https://api.twitter.comttps://syndication.twitter.comhttps://cdn.syndication.twimg.comhttps://.twimg.com; frame-src https://platform.twitter.comfont-src 'self' data: https://*.twimg.com"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/legal/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://platform.twitter.comhttps://cdn.syndication.twimg.comstyle-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://.twimg.com https://pbs.twimg.comconnect-src 'self' https://api.twitter.comttps://syndication.twitter.comhttps://cdn.syndication.twimg.comhttps://.twimg.com; frame-src https://platform.twitter.comfont-src 'self' data: https://*.twimg.com"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/terms",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://platform.twitter.comhttps://cdn.syndication.twimg.comstyle-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://.twimg.com https://pbs.twimg.comconnect-src 'self' https://api.twitter.comttps://syndication.twitter.comhttps://cdn.syndication.twimg.comhttps://.twimg.com; frame-src https://platform.twitter.comfont-src 'self' data: https://*.twimg.com"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/terms/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://platform.twitter.comhttps://cdn.syndication.twimg.comstyle-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://.twimg.com https://pbs.twimg.comconnect-src 'self' https://api.twitter.comttps://syndication.twitter.comhttps://cdn.syndication.twimg.comhttps://.twimg.com; frame-src https://platform.twitter.comfont-src 'self' data: https://*.twimg.com"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0, must-revalidate"
+        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" },
+        { "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://platform.twitter.com https://cdn.syndication.twimg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.twimg.com https://pbs.twimg.com; connect-src 'self' https://api.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twimg.com; frame-src https://platform.twitter.com; font-src 'self' data: https://*.twimg.com"
         }
       ]
     }
   ],
   "redirects": [
     {
-      "source": "/(.*)",
+      "source": "/:path*",
       "has": [{ "type": "host", "value": "www.aurabytecoin.net" }],
-      "destination": "https://aurabytecoin.net/$1",
+      "destination": "https://aurabytecoin.net/:path*",
       "permanent": true
     }
   ]
