@@ -1,205 +1,247 @@
+/* AUB day odometer — smooth randomizer + glow + UTC midnight rollover */
 (() => {
-  const ROOT = '.aub-day-odometer';
-  const MIN_DIGITS = 2;
+  // ---------- CONFIG ----------
+  const SEL = '.aub-day-odometer';         // your odometer container
+  const MIN_DIGITS = 2;                    // always show at least NN
+  const SCRAMBLE_MS = 1400;                // duration of random scramble
+  const LAST_TICKS = 4;                    // 3 pre-final + final
+  const MIN_INTERVAL = 35;                 // fastest scramble tick (ms)
+  const MAX_INTERVAL = 170;                // slowest scramble tick (ms)
+  const JITTER_MS = 28;                    // de-sync per slot
+  const FINAL_TICK_BASE = 110;             // first slow tick delay (ms)
+  const FINAL_TICK_GROW = 1.65;            // successive delay multiplier
 
-  // --- tuning: faster & smoother ---
-  const LOOPS_BASE = 5;            // base 0–9 cycles per column
-  const LOOPS_JITTER = 4;          // randomness per column
-  const SPEED_PER_STEP = 14;       // ms per fast step (phase 1)
-  const FINAL_TICKS = [170, 220, 300]; // last 3 slower steps
-  const EASE_FAST = 'cubic-bezier(.25,.9,.1,1)';
-  const EASE_SLOW = 'cubic-bezier(.2,.65,.12,1)';
+  // ---------- helpers ----------
+  const easeOutExpo = t => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
+  const prefersReduced = () =>
+    window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // ---------- UTC day ----------
-  const launchUTC = () => {
-    const meta = document.querySelector('meta[name="aub-launch-utc"]')?.content;
-    const raw  = meta || window.AUB_LAUNCH_UTC || '2025-08-25T00:00:00Z';
-    const d = new Date(raw);
-    return isNaN(+d) ? new Date('2025-08-25T00:00:00Z') : d;
-  };
-  const dayUTC = () => {
-    const z = new Date();
-    const nowUTC = z.getTime() + z.getTimezoneOffset()*60000;
-    const d0 = launchUTC().getTime();
-    return Math.max(1, Math.floor((nowUTC - d0)/86400000) + 1);
-  };
-  const msToNextUtcMidnight = () => {
-    const z = new Date();
-    const nowUTC = z.getTime() + z.getTimezoneOffset()*60000;
-    const d = new Date(nowUTC);
-    const next = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()+1, 0,0,0,50);
-    return Math.max(500, next - nowUTC);
-  };
-  const pad2 = v => String(v).padStart(MIN_DIGITS, '0');
-
-  // ---------- styles (pure black card; NO gray halves) ----------
-  function injectStyle() {
-    if (document.getElementById('aub-roller-style')) return;
-    const s = document.createElement('style');
-    s.id = 'aub-roller-style';
-    s.textContent = `
-      ${ROOT} {
-        display:inline-flex; gap:4px; white-space:nowrap; position:relative;
-        font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
-        -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  function injectStyles() {
+    if (document.getElementById('aub-day-roller-css')) return;
+    const css = `
+      :root {
+        --aub-slot-w: 52px;   /* width of each digit (after your prior shrink) */
+        --aub-slot-h: 75px;   /* height of each digit */
+        --aub-font:   54px;   /* font size */
+        --aub-gap:     4px;   /* gap between digits */
+        --aub-fg:    #f8f8f8; /* digit color */
+        --aub-bg:    #000;    /* slot background */
+        --aub-glow1: rgba(255,255,255,.85);
+        --aub-glow2: rgba(156,206,255,.55);
       }
-      ${ROOT} .aub-col{
-        position:relative; width:52px; height:75px; overflow:hidden;
-        border-radius:6px; background:#0d0d0d; box-shadow:0 3px 10px #111;
-        border-top:1px solid #393;    /* subtle rim; keep card pure black inside */
+      ${SEL} {
+        display:inline-flex;
+        align-items:center;
+        gap: var(--aub-gap);
+        contain: content;
+        user-select:none;
+        -webkit-tap-highlight-color: transparent;
       }
-      ${ROOT} .aub-track{
-        position:absolute; left:0; top:0; will-change:transform;
-        transform:translateY(0);
+      ${SEL} .aub-slot {
+        position: relative;
+        width: var(--aub-slot-w);
+        height: var(--aub-slot-h);
+        background: var(--aub-bg);
+        border-radius: 8px;
+        overflow: hidden;              /* no bleed = no second layer visible */
+        display:flex; align-items:center; justify-content:center;
+        will-change: contents, filter, transform;
+        transform: translateZ(0);      /* crisp text on GPU layer */
       }
-      ${ROOT} .aub-cell{
-        width:52px; display:flex; align-items:center; justify-content:center;
-        color:#fff; font-size:54px; line-height:1; letter-spacing:0;
-        text-shadow:none; filter:none; user-select:none;
+      ${SEL} .aub-digit {
+        font-size: var(--aub-font);
+        line-height: 1;
+        font-weight: 800;
+        color: var(--aub-fg);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum" 1;
+        letter-spacing: 0;
+        text-shadow:
+          0 0 6px  var(--aub-glow1),
+          0 0 14px var(--aub-glow2),
+          0 0 22px var(--aub-glow2);
+        will-change: text-shadow, transform;
+        transform: translateZ(0);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
-      /* hide any legacy children that caused double numbers */
-      ${ROOT} > :not(.aub-col){ display:none !important; }
+      /* slightly stronger glow during scramble, then snaps clean on final */
+      ${SEL}.is-scrambling .aub-digit {
+        text-shadow:
+          0 0 8px  var(--aub-glow1),
+          0 0 18px var(--aub-glow2),
+          0 0 26px var(--aub-glow2);
+        filter: drop-shadow(0 0 1px rgba(255,255,255,.25));
+      }
+      ${SEL}.is-final .aub-digit {
+        text-shadow:
+          0 0 5px var(--aub-glow1),
+          0 0 12px var(--aub-glow2);
+        filter: none;
+      }
     `;
+    const s = document.createElement('style');
+    s.id = 'aub-day-roller-css';
+    s.textContent = css;
     document.head.appendChild(s);
   }
 
-  const rootEl = () => document.querySelector(ROOT);
+  function readLaunchUTC() {
+    const fromMeta = document.querySelector('meta[name="aub-launch-utc"]')?.content;
+    const fromWin  = window.AUB_LAUNCH_UTC;
+    return new Date(fromMeta || fromWin || '2025-08-25T00:00:00Z');
+  }
 
-  function ensureCols(n) {
-    const root = rootEl(); if (!root) return [];
-    if (root.dataset.aubInit !== '1') { root.dataset.aubInit = '1'; root.textContent = ''; }
-    const have = root.querySelectorAll('.aub-col').length;
-    if (have !== n) {
-      root.textContent = '';
-      const frag = document.createDocumentFragment();
-      for (let i=0;i<n;i++){
-        const col = document.createElement('div'); col.className = 'aub-col';
-        const track = document.createElement('div'); track.className = 'aub-track';
-        col.appendChild(track); frag.appendChild(col);
+  function daysSinceLaunchUTC(launch) {
+    // Floor to whole UTC days since launch, then +1 so launch day = 01
+    const now = new Date();
+    const ms = Date.UTC(
+      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()
+    ) - Date.UTC(
+      launch.getUTCFullYear(), launch.getUTCMonth(), launch.getUTCDate()
+    );
+    return Math.floor(ms / 86400000) + 1;
+  }
+
+  function rebuildSlots(root, digits) {
+    root.innerHTML = ''; // nuke any previous/static layers
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < digits; i++) {
+      const slot = document.createElement('span');
+      slot.className = 'aub-slot';
+      const d = document.createElement('span');
+      d.className = 'aub-digit';
+      d.textContent = '0';
+      slot.appendChild(d);
+      frag.appendChild(slot);
+    }
+    root.appendChild(frag);
+    return Array.from(root.querySelectorAll('.aub-digit'));
+  }
+
+  // Random scramble with easing → 3 slow ticks → final
+  function shuffleTo(root, targetNumber) {
+    if (prefersReduced()) {
+      setDigits(root, targetNumber);
+      return;
+    }
+
+    const finalStr = String(targetNumber);
+    const digits = Math.max(MIN_DIGITS, finalStr.length);
+    const els = rebuildSlots(root, digits);
+    const final = finalStr.padStart(digits, '0').split('').map(n => +n);
+
+    root.classList.add('is-scrambling');
+    root.classList.remove('is-final');
+
+    // Phase A — scramble with decelerating pace
+    const start = performance.now();
+    const lastTouch = new Array(digits).fill(0);
+    function scramble(now) {
+      const t = Math.min(1, (now - start) / SCRAMBLE_MS);
+      const eased = easeOutExpo(t);
+      const interval = MIN_INTERVAL + (MAX_INTERVAL - MIN_INTERVAL) * eased;
+
+      for (let i = 0; i < digits; i++) {
+        const jitter = Math.random() * JITTER_MS + i * 5; // slight stagger per slot
+        if (now - lastTouch[i] >= interval + jitter) {
+          let r = (Math.random() * 10) | 0;
+          els[i].textContent = String(r);
+          lastTouch[i] = now;
+        }
       }
-      root.appendChild(frag);
+      if (t < 1) requestAnimationFrame(scramble);
+      else settle();
     }
-    return Array.from(root.querySelectorAll('.aub-col'));
-  }
 
-  function setDigitImmediately(col, digit){
-    // Rebuild minimal track to a single cell = crisp & no residual transforms
-    const track = col.querySelector('.aub-track');
-    const h = col.clientHeight;
-    track.style.transition = 'none';
-    track.style.transform = 'translateY(0)';
-    track.innerHTML = '';
-    const cell = document.createElement('div'); cell.className = 'aub-cell';
-    cell.style.height = h + 'px';
-    cell.textContent = String(digit);
-    track.appendChild(cell);
-    col.dataset.d = String(digit);
-    // force reflow
-    void track.offsetHeight;
-  }
+    // Phase B — 3 slow ticks per digit, then final
+    function settle() {
+      const delays = [];
+      let acc = FINAL_TICK_BASE;
+      for (let k = 0; k < LAST_TICKS - 1; k++) {
+        delays.push(Math.round(acc));
+        acc *= FINAL_TICK_GROW;
+      }
+      // one more for the final reveal
+      delays.push(Math.round(acc));
 
-  function buildTrackForSteps(col, startDigit, steps){
-    const track = col.querySelector('.aub-track');
-    const h = col.clientHeight;
-    track.style.transition = 'none';
-    track.style.transform = 'translateY(0)';
-    track.innerHTML = '';
-    for (let k=0; k<=steps; k++){
-      const cell = document.createElement('div');
-      cell.className = 'aub-cell';
-      cell.style.height = h + 'px';
-      cell.textContent = String((startDigit + k) % 10);
-      track.appendChild(cell);
-    }
-    void track.offsetHeight;
-  }
+      els.forEach((el, i) => {
+        // choose distinct pre-final digits (not equal to final)
+        const picks = [];
+        for (let p = 0; p < LAST_TICKS - 1; p++) {
+          let v;
+          do { v = (Math.random() * 10) | 0; } while (v === final[i] || v === picks[p-1]);
+          picks.push(v);
+        }
+        const laneDelay = i * 40; // slight cascade across lanes
 
-  function tweenTo(col, stepIndex, dur, ease, cb){
-    const track = col.querySelector('.aub-track');
-    track.style.transition = `transform ${Math.max(40,dur)}ms ${ease}`;
-    const h = col.clientHeight;
-    track.style.transform = `translateY(${-h*stepIndex|0}px)`;
-    const done = () => { track.removeEventListener('transitionend', done); cb && cb(); };
-    const t = setTimeout(done, dur + 40); // safety
-    track.addEventListener('transitionend', () => { clearTimeout(t); done(); }, { once:true });
-  }
-
-  function animateColumn(col, finalDigit, columnIndex, columnsTotal){
-    const start = parseInt(col.dataset.d ?? '0', 10) || 0;
-    if (start === finalDigit) { setDigitImmediately(col, finalDigit); return; }
-
-    // randomized loops; leftmost spins more for fun
-    const loops = LOOPS_BASE + Math.floor(Math.random()*LOOPS_JITTER) + (columnsTotal-1-columnIndex);
-    const delta = (finalDigit - start + 10) % 10;
-    const totalSteps = loops*10 + delta;
-
-    // phase plan: long smooth scroll, then 3 slow ticks
-    const fastSteps = Math.max(0, totalSteps - FINAL_TICKS.length);
-    const fastDuration = Math.max(220, Math.round(fastSteps * (SPEED_PER_STEP + (Math.random()*10 - 5))));
-    const jitterStart = Math.round(Math.random()*120);
-
-    // build track large enough for this whole run
-    buildTrackForSteps(col, start, totalSteps);
-
-    // kickoff (desync columns slightly)
-    setTimeout(() => {
-      if (fastSteps > 0) {
-        tweenTo(col, fastSteps, fastDuration, EASE_FAST, () => {
-          // final 3 gentle ticks
-          let idx = fastSteps;
-          (function slowTick(i){
-            if (i >= FINAL_TICKS.length) {
-              // snap to final & compact track
-              setDigitImmediately(col, finalDigit);
-              return;
-            }
-            idx += 1;
-            tweenTo(col, idx, FINAL_TICKS[i], EASE_SLOW, () => slowTick(i+1));
-          })(0);
+        // schedule ticks
+        picks.forEach((v, idx) => {
+          setTimeout(() => { el.textContent = String(v); }, laneDelay + delays[idx]);
         });
-      } else {
-        // fewer than 3 steps total → just do the slow ticks we have
-        let idx = 0, left = totalSteps;
-        const seq = FINAL_TICKS.slice(-left);
-        (function doStep(i){
-          if (i >= seq.length) { setDigitImmediately(col, finalDigit); return; }
-          idx += 1; tweenTo(col, idx, seq[i], EASE_SLOW, () => doStep(i+1));
-        })(0);
-      }
-    }, jitterStart);
+        // final value
+        setTimeout(() => {
+          el.textContent = String(final[i]);
+          if (i === digits - 1) {
+            root.classList.remove('is-scrambling');
+            root.classList.add('is-final');
+          }
+        }, laneDelay + delays[delays.length - 1]);
+      });
+    }
+
+    requestAnimationFrame(scramble);
   }
 
-  function shuffleTo(targetStr){
-    const root = rootEl(); if (!root) return;
-    const need = Math.max(MIN_DIGITS, targetStr.length);
-    const cols = ensureCols(need);
-    const digits = targetStr.padStart(need,'0').split('').map(n => +n);
-    cols.forEach((col, i) => animateColumn(col, digits[i], i, need));
-    root.setAttribute('aria-label', `DAY ${targetStr}`);
+  function setDigits(root, n) {
+    const s = String(n);
+    const digits = Math.max(MIN_DIGITS, s.length);
+    const els = rebuildSlots(root, digits);
+    const final = s.padStart(digits, '0');
+    for (let i = 0; i < digits; i++) els[i].textContent = final[i];
+    root.classList.add('is-final');
+    root.classList.remove('is-scrambling');
   }
 
-  function updateDay(){
-    shuffleTo(pad2(dayUTC()));
+  function updateDay(root, launch) {
+    const day = Math.max(1, daysSinceLaunchUTC(launch));
+    root.setAttribute('aria-label', `DAY ${String(day).padStart(2, '0')}`);
+    shuffleTo(root, day);
   }
-  function scheduleRollover(){
-    setTimeout(() => { updateDay(); scheduleRollover(); }, msToNextUtcMidnight());
+
+  function scheduleMidnightUTC(cb) {
+    const now = new Date();
+    const next = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() + 1, // next day midnight UTC
+      0,0,0,0
+    ));
+    const wait = next.getTime() - now.getTime();
+    setTimeout(() => { cb(); scheduleMidnightUTC(cb); }, wait);
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const root = rootEl(); if (!root) return;
-    injectStyle();
+  // ---------- init ----------
+  function init() {
+    injectStyles();
+    const root = document.querySelector(SEL);
+    if (!root) return;
 
-    // Snap font-size to whole px for crispness
-    const fs = parseFloat(getComputedStyle(root).fontSize);
-    if (fs && Math.abs(fs - Math.round(fs)) > 0.01) root.style.fontSize = Math.round(fs) + 'px';
+    const launch = readLaunchUTC();
+    // First render
+    updateDay(root, launch);
+    // Rollover at UTC midnight
+    scheduleMidnightUTC(() => updateDay(root, launch));
 
-    // start state
-    const v = pad2(dayUTC());
-    ensureCols(Math.max(MIN_DIGITS, v.length)).forEach((col, i) => setDigitImmediately(col, +v[i]));
-    root.setAttribute('aria-label', `DAY ${v}`);
+    // expose tiny debug helpers
+    window.AUB_SHUFFLE = (n) => shuffleTo(root, n);
+    window.AUB_SET = (n) => setDigits(root, n);
+    window.AUB_UPDATE_DAY = () => updateDay(root, launch);
+  }
 
-    // run first shuffle shortly after mount
-    setTimeout(updateDay, 60);
-    scheduleRollover();
-  });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
 })();
