@@ -1,185 +1,255 @@
 (() => {
-  const SELECTOR = '.aub-day-odometer';
-  const MIN_DIGITS = 2;
+  // =========================
+  // CONFIG
+  // =========================
+  const ROOT_SEL = '.aub-day-odometer'; // container for the day digits
+  const MIN_DIGITS = 2;                 // always show at least 2 digits (e.g., 03)
 
-  // Motion: SNAP-only updates (no translate) to stay razor sharp
-  const SCRAMBLE_MS  = 520;  // quick shuffly burst
-  const SCR_MIN      = 40;   // faster at start
-  const SCR_MAX      = 90;   // slower near end
-  const SETTLE_TICKS = 4;    // 3 slow ticks + final
-  const SETTLE_BASE  = 90;
-  const SETTLE_GROW  = 1.55;
+  // Shuffle feel
+  const LOOPS_BASE = 6;      // base full cycles (0→9) per leftmost digit
+  const LOOPS_JITTER = 4;    // extra random cycles
+  const FAST_MIN = 60;       // ms per fast flip (start)
+  const FAST_MAX = 120;      // ms per fast flip (before slow ticks)
+  const LAST_TICKS = [180, 260, 360]; // last 3 slower flips
+  const EASE = 'cubic-bezier(.25,.9,.1,1)';
 
-  function injectStyle(){
-    if (document.getElementById('aub-day-style')) return;
-    const style = document.createElement('style');
-    style.id = 'aub-day-style';
-    style.textContent = `
-      ${SELECTOR}{
-        position:relative;display:inline-flex;gap:.08em;white-space:nowrap;
-        font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
-        -webkit-font-smoothing:subpixel-antialiased; -moz-osx-font-smoothing:auto;
-        text-rendering:optimizeLegibility; transform:none !important; filter:none !important;
-      }
-      /* If some stray element sits in the container, hide it */
-      ${SELECTOR} > :not(.slot){display:none !important}
-      ${SELECTOR} .slot{
-        position:relative;display:inline-block;overflow:hidden;
-        width:.72em;height:var(--aub-h,40px);line-height:var(--aub-h,40px);
-      }
-      ${SELECTOR} .digit{
-        position:relative;display:block;height:var(--aub-h,40px);line-height:var(--aub-h,40px);
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  const rootEl = () => document.querySelector(SELECTOR);
-  const pad = (n, d = MIN_DIGITS) => String(n).padStart(d, '0');
-
-  function measure(root){
-    const probeSlot = document.createElement('span');
-    probeSlot.className = 'slot'; probeSlot.style.visibility = 'hidden'; probeSlot.style.position = 'absolute';
-    const d = document.createElement('span'); d.className = 'digit'; d.textContent = '0';
-    probeSlot.appendChild(d); root.appendChild(probeSlot);
-    const h = Math.max(10, Math.round(d.getBoundingClientRect().height));
-    root.style.setProperty('--aub-h', h + 'px'); probeSlot.remove();
-    return h;
-  }
-
-  // Hard reset: remove ALL children (kills static text nodes) and rebuild
-  function buildSlots(count){
-    const root = rootEl(); if (!root) return [];
-    root.textContent = ''; // nuke any static numbers / text nodes
-    const frag = document.createDocumentFragment();
-    for (let i = 0; i < count; i++){
-      const s = document.createElement('span'); s.className = 'slot';
-      const d = document.createElement('span'); d.className = 'digit'; d.textContent = '0';
-      s.appendChild(d); frag.appendChild(s);
-    }
-    root.appendChild(frag);
-    return Array.from(root.querySelectorAll('.slot'));
-  }
-
-  function setDigit(slot, d){
-    let el = slot.querySelector('.digit');
-    if (!el){ el = document.createElement('span'); el.className = 'digit'; slot.appendChild(el); }
-    el.textContent = String(d);
-  }
-
-  // ---------- Day math (UTC) ----------
-  function getLaunchDateUTC(){
+  // =========================
+  // DAY (UTC) CALC
+  // =========================
+  function getLaunchUTC() {
     const meta = document.querySelector('meta[name="aub-launch-utc"]')?.content;
     const raw = meta || window.AUB_LAUNCH_UTC || '2025-08-25T00:00:00Z';
     const d = new Date(raw);
     return isNaN(+d) ? new Date('2025-08-25T00:00:00Z') : d;
   }
-  function computeDayUTC(){
-    const launch = getLaunchDateUTC();
-    const now = new Date();
-    const nowUTC = now.getTime() + now.getTimezoneOffset()*60000;
-    const day = Math.floor((nowUTC - launch.getTime())/86400000) + 1;
-    return Math.max(1, day);
+  function computeDayUTC() {
+    const launch = getLaunchUTC().getTime();
+    const now = Date.now();
+    const tz = new Date().getTimezoneOffset() * 60000;
+    const nowUTC = now + tz;
+    // Day 1 on launch UTC day
+    return Math.max(1, Math.floor((nowUTC - launch) / 86400000) + 1);
   }
-  function msUntilNextUtcMidnight(){
-    const now = new Date();
-    const nowUTC = now.getTime() + now.getTimezoneOffset()*60000;
+  function msUntilNextUtcMidnight() {
+    const n = new Date();
+    const nowUTC = n.getTime() + n.getTimezoneOffset() * 60000;
     const d = new Date(nowUTC);
-    const nextMid = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()+1, 0,0,0,100);
-    return Math.max(1000, nextMid - nowUTC);
+    const next = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0, 50);
+    return Math.max(500, next - nowUTC);
   }
-  function setLabel(dayStr){ rootEl()?.setAttribute('aria-label', `DAY ${dayStr}`); }
+  const pad2 = v => String(v).padStart(MIN_DIGITS, '0');
 
-  // ---------- SHUFFLE (snap) → slow 3–4 ticks → reveal ----------
-  function shuffleTo(target){
-    const root = rootEl(); if (!root) return;
-    const finalStr = String(target);
-    const needed = Math.max(MIN_DIGITS, finalStr.length);
+  // =========================
+  // STYLE INJECTION (Flip-card look; no auto keyframes)
+  // =========================
+  function injectStyle() {
+    if (document.getElementById('aub-flip-style')) return;
+    const s = document.createElement('style');
+    s.id = 'aub-flip-style';
+    s.textContent = `
+      ${ROOT_SEL}{
+        display:inline-flex; gap:12px; position:relative; white-space:nowrap;
+        font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
+        -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+      }
+      ${ROOT_SEL} .nums{
+        position:relative; width:140px; height:200px; perspective:1000px;
+        display:inline-block; border-top:1px solid #393939; box-shadow:0 3px 10px #111;
+        border-radius:6px; overflow:hidden; background:#1a1a1a;
+      }
+      /* Soft mid seam (much lighter than the heavy "black box") */
+      ${ROOT_SEL} .nums::before{
+        content:""; position:absolute; left:0; top:50%; width:100%; height:1px;
+        transform:translateY(-1px); border-bottom:1px solid rgba(0,0,0,.45);
+        z-index:5; pointer-events:none;
+      }
+      /* Lower half background (subtle, not a big black slab) */
+      ${ROOT_SEL} .nums::after{
+        content:""; position:absolute; left:0; bottom:0; width:100%; height:calc(50% - 1px);
+        background:linear-gradient(#262626, #1b1b1b); border-top:1px solid #0005;
+        box-shadow:inset 0 15px 50px #1a1a1a;
+        z-index:0; pointer-events:none;
+      }
+      ${ROOT_SEL} .num{
+        position:absolute; inset:0; transform-style:preserve-3d; transform:rotateX(0deg);
+        will-change:transform; border-radius:5px;
+        /* Disables any auto keyframe animations from templates */
+        animation:none !important;
+      }
+      ${ROOT_SEL} .num::before,
+      ${ROOT_SEL} .num::after{
+        position:absolute; left:0; width:100%; color:#eee; display:block;
+        text-align:center; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+        font-size:145px; text-shadow:0 0.5px 0.5px #222; /* tiny, crisp */
+      }
+      ${ROOT_SEL} .num::before{
+        content:attr(data-num); top:0; height:50%; line-height:138px;
+        background:linear-gradient(#1c1c1c,#111); border-radius:5px 5px 0 0;
+        box-shadow:inset 0 15px 50px #0f0f0f;
+        z-index:2;
+      }
+      ${ROOT_SEL} .num::after{
+        content:attr(data-num-next); top:0; height:calc(50% - 1px); line-height:0;
+        transform:rotateX(180deg);
+        background:linear-gradient(#252525,#1a1a1a);
+        border-bottom:1px solid #4448; border-radius:0 0 5px 5px;
+        box-shadow:inset 0 15px 50px #1a1a1a;
+      }
+      /* Prevent any legacy children from showing → no double overlay */
+      ${ROOT_SEL} > :not(.nums){ display:none !important; }
+    `;
+    document.head.appendChild(s);
+  }
 
-    // If slot count mismatches or container still has text, rebuild fresh
-    const haveSlots = Array.from(root.querySelectorAll('.slot'));
-    const textNodesRemain = Array.from(root.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim() !== '');
-    const slots = (haveSlots.length !== needed || textNodesRemain) ? buildSlots(needed) : haveSlots;
+  // =========================
+  // BUILD / RESET
+  // =========================
+  function rootEl(){ return document.querySelector(ROOT_SEL); }
 
-    const finalDigits = finalStr.padStart(slots.length,'0').split('').map(Number);
-    const lastShown = slots.map(s => parseInt(s.querySelector('.digit')?.textContent || '0', 10) || 0);
-
-    // Phase A: random scramble (SNAP updates only)
-    const start = performance.now();
-    const nextAt = slots.map(() => 0);
-
-    (function scramble(now){
-      const t = Math.min(1, (now - start)/SCRAMBLE_MS);
-      const dur = SCR_MIN + (SCR_MAX - SCR_MIN) * t;
-      slots.forEach((slot, i) => {
-        if (now >= nextAt[i]){
-          const hop = 1 + Math.floor(Math.random()*3);
-          const nxt = (lastShown[i] + hop) % 10;
-          setDigit(slot, nxt);
-          lastShown[i] = nxt;
-          nextAt[i] = now + dur * (0.9 + Math.random()*0.3);
-        }
-      });
-      if (t < 1) requestAnimationFrame(scramble);
-      else settle();
-    })(performance.now());
-
-    // Phase B: last ticks slow down, then final (SNAP)
-    function settle(){
-      slots.forEach((slot, i) => {
-        const final = finalDigits[i];
-        let cur = lastShown[i];
-        const dist = (final - cur + 10) % 10;
-        const steps = Math.max(SETTLE_TICKS, 3);
-        const queue = [];
-        for (let s = steps; s > 1; s--){
-          const n = (cur + Math.max(1, Math.round(dist*(s-1)/steps))) % 10;
-          queue.push(n); cur = n;
-        }
-        queue.push(final);
-
-        let delay = 0;
-        queue.forEach((digit, idx) => {
-          const stepDur = Math.round(SETTLE_BASE * Math.pow(SETTLE_GROW, idx));
-          setTimeout(() => setDigit(slot, digit), delay);
-          delay += stepDur;
-        });
-      });
-
-      const tail = Math.round(SETTLE_BASE * Math.pow(SETTLE_GROW, Math.max(SETTLE_TICKS,3)));
-      setTimeout(() => setLabel(finalStr.padStart(2,'0')), tail + 40);
+  function buildCols(count){
+    const root = rootEl(); if (!root) return [];
+    // Nuke anything inside to avoid duplicates/overlaps
+    root.textContent = '';
+    const frag = document.createDocumentFragment();
+    for (let i=0;i<count;i++){
+      const wrap = document.createElement('div');
+      wrap.className = 'nums';
+      const card = document.createElement('div');
+      card.className = 'num';
+      card.dataset.num = '0';
+      card.dataset.numNext = '1';
+      wrap.appendChild(card);
+      frag.appendChild(wrap);
     }
+    root.appendChild(frag);
+    return Array.from(root.querySelectorAll('.nums'));
   }
 
-  function update(){ shuffleTo(pad(computeDayUTC())); }
-  function scheduleRollover(){ setTimeout(() => { update(); scheduleRollover(); }, msUntilNextUtcMidnight()); }
+  // =========================
+  // FLIP ENGINE (JS-driven)
+  // =========================
+  function flipOnce(wrap, nextDigit, dur, cb){
+    const card = wrap.querySelector('.num');
+    const cur = parseInt(card.dataset.num || '0', 10) || 0;
+    // prepare faces
+    card.dataset.num = String(cur);
+    card.dataset.numNext = String(nextDigit);
+    // animate
+    requestAnimationFrame(() => {
+      card.style.transition = `transform ${Math.max(50,dur)}ms ${EASE}`;
+      card.style.transform  = 'rotateX(-180deg)';
+      const done = () => {
+        card.removeEventListener('transitionend', done);
+        // settle state
+        card.style.transition = 'none';
+        card.style.transform  = 'rotateX(0deg)';
+        card.dataset.num = String(nextDigit);
+        card.dataset.numNext = String((nextDigit + 1) % 10);
+        cb && cb();
+      };
+      card.addEventListener('transitionend', done, { once:true });
+    });
+  }
 
+  function flipSequence(wrap, startDigit, steps, durations, onDone){
+    let cur = startDigit % 10;
+    let i = 0;
+    const tick = () => {
+      if (i >= steps) { onDone && onDone(); return; }
+      const next = (cur + 1) % 10;
+      const dur  = durations[i];
+      flipOnce(wrap, next, dur, () => {
+        cur = next; i++; tick();
+      });
+    };
+    tick();
+  }
+
+  function planDurations(total){
+    const body = Math.max(0, total - LAST_TICKS.length);
+    const durs = [];
+    for (let i=0;i<body;i++){
+      const t = body ? i/(body-1 || 1) : 1;
+      const base = FAST_MIN + (FAST_MAX - FAST_MIN) * t;
+      const jitter = (Math.random()*2-1) * 20; // ±20ms
+      durs.push(Math.max(40, Math.round(base + jitter)));
+    }
+    // tail (3 slower, dramatic)
+    LAST_TICKS.forEach(ms => durs.push(ms));
+    return durs;
+  }
+
+  // =========================
+  // SHUFFLE → FINAL
+  // =========================
+  function shuffleTo(targetStr){
+    const root = rootEl(); if (!root) return;
+    const need = Math.max(MIN_DIGITS, targetStr.length);
+    const cols = (root.querySelectorAll('.nums').length === need)
+      ? Array.from(root.querySelectorAll('.nums'))
+      : buildCols(need);
+
+    const digits = targetStr.padStart(need,'0').split('').map(n => +n);
+    const doneFlags = new Array(need).fill(false);
+    const onColDone = () => {
+      if (doneFlags.every(Boolean)) {
+        root.setAttribute('aria-label', `DAY ${targetStr}`);
+      }
+    };
+
+    cols.forEach((wrap, idx) => {
+      // desync columns a bit so they don't look robotic
+      const startJitter = Math.round(Math.random()*120);
+      setTimeout(() => {
+        const card = wrap.querySelector('.num');
+        const start = parseInt(card.dataset.num || '0', 10) || 0;
+        const final = digits[idx];
+
+        const loops = LOOPS_BASE + (cols.length - 1 - idx) * 2 + Math.floor(Math.random()*LOOPS_JITTER);
+        const delta = (final - start + 10) % 10;
+        const totalSteps = loops * 10 + Math.max(0, delta);
+
+        const durs = planDurations(totalSteps);
+        flipSequence(wrap, start, totalSteps, durs, () => {
+          doneFlags[idx] = true;
+          onColDone();
+        });
+      }, startJitter);
+    });
+  }
+
+  // =========================
+  // TICK DAY + ROLLOVER
+  // =========================
+  function updateDay(){
+    const v = pad2(computeDayUTC());
+    const root = rootEl(); if (!root) return;
+    root.dataset.current = v;
+    shuffleTo(v);
+  }
+  function scheduleRollover(){
+    setTimeout(() => { updateDay(); scheduleRollover(); }, msUntilNextUtcMidnight());
+  }
+
+  // =========================
+  // INIT
+  // =========================
   document.addEventListener('DOMContentLoaded', () => {
     const root = rootEl(); if (!root) return;
-
-    // Singleton guard to prevent double init overlap
     if (root.dataset.aubInit === '1') return;
     root.dataset.aubInit = '1';
 
     injectStyle();
 
-    // Force integer font-size to avoid fractional rasterization
-    const cs = getComputedStyle(root);
-    const fs = parseFloat(cs.fontSize);
-    if (fs && Math.abs(fs - Math.round(fs)) > 0.01){ root.style.fontSize = Math.round(fs) + 'px'; }
+    // crisp fonts: snap font-size to integer px
+    const fs = parseFloat(getComputedStyle(root).fontSize);
+    if (fs && Math.abs(fs - Math.round(fs)) > 0.01) root.style.fontSize = Math.round(fs) + 'px';
 
-    const today = pad(computeDayUTC());
-    buildSlots(today.length);            // <- wipes static nodes and builds fresh
-    const slots = Array.from(root.querySelectorAll('.slot'));
-    today.split('').forEach((d,i) => setDigit(slots[i], d));
-    setLabel(today);
-
-    measure(root);
-    setTimeout(() => shuffleTo(today), 60); // initial life
+    // build fresh columns and animate to current UTC day
+    const v = pad2(computeDayUTC());
+    buildCols(Math.max(MIN_DIGITS, v.length));
+    root.setAttribute('aria-label', `DAY ${v}`);
+    setTimeout(updateDay, 40);
     scheduleRollover();
-
-    let rt; window.addEventListener('resize', () => {
-      clearTimeout(rt); rt = setTimeout(() => measure(root), 100);
-    });
   });
 })();
