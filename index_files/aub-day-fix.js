@@ -1,226 +1,379 @@
-/* AUB Day Odometer – standalone, smooth 60fps shuffle */
-(() => {
-  // ---------- CONFIG ----------
-  const LAUNCH_UTC  = new Date(
-    document.querySelector('meta[name="aub-launch-utc"]')?.content
-    || window.AUB_LAUNCH_UTC
-    || '2025-08-25T00:00:00Z'
-  );
-  const DIGITS      = '0123456789';
-  const REPEAT_ROWS = 8;      // total rows = 10 * REPEAT_ROWS (enough headroom to spin)
-  const EASE        = 'cubic-bezier(.20,.70,.10,1)'; // buttery ease
-  const FONT_STACK  = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
-  const GLYPH_GLOW  = '0 0 6px rgba(255,255,255,.55), 0 0 16px rgba(255,255,255,.15)';
+/* AUBSNAP — Odometer (DAY NN) Shuffler — single-file drop-in
+   Crisp monospace digits, subtle glow, random→slow-tick settle, UTC-correct rollover.
+*/
+(function () {
+  "use strict";
 
-  // ---------- CSS (injected once) ----------
-  const SID = 'aub-day-css';
-  if (!document.getElementById(SID)) {
-    const s = document.createElement('style'); s.id = SID;
-    s.textContent = `
-    .aub-day-odometer{
-      --aub-size: 45px;              /* height per digit */
-      --aub-width-mult: 1.10;        /* width = height * mult  */
-      --aub-gap: 6px;
-      display:inline-flex; align-items:center; gap:var(--aub-gap);
-      color:#fff; font:700 calc(var(--aub-size)*0.84)/1 ${FONT_STACK};
-      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-    }
-    .aub-day-odometer .aub-label{ margin-right:10px; letter-spacing:.06em; opacity:.9; }
-    .aub-slot{
-      position:relative; overflow:hidden; background:#000;
-      height:var(--aub-size); width:calc(var(--aub-size)*var(--aub-width-mult));
-      min-width:calc(var(--aub-size)*var(--aub-width-mult));
-      display:block; border-radius:6px;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
-    }
-    .aub-reel{
-      position:absolute; left:0; top:0; right:0;
-      transform: translate3d(0,0,0);
-    }
-    .aub-glyph{
-      height:var(--aub-size);
-      display:flex; align-items:center; justify-content:center;
-      text-shadow:${GLYPH_GLOW};
-      letter-spacing:-.02em;
-      user-select:none; pointer-events:none;
-    }
-    .aub-day-odometer .aub-gap{ width:calc(var(--aub-gap)*1.5); height:1px; }
-    `;
-    document.head.appendChild(s);
+  const DEFAULT_HEIGHT = 45;
+  const DEFAULT_WIDTH_MULT = 1.10;
+  const GLOW_REST = 0.25;
+  const GLOW_ACTIVE = 0.80;
+  const SCRAMBLE_MS = 700;
+  const SETTLE_TICKS = [3, 4];
+  const TICK_MS = [140, 220];
+  const EASE = t => 1 - Math.pow(1 - t, 3);
+  const STYLE_ID = "aub-odometer-style";
+
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const nowPerf = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+
+  function readLaunchUTC() {
+    const meta = document.querySelector('meta[name="aub-launch-utc"]');
+    const raw = (meta && meta.getAttribute("content")) || (window.AUB_LAUNCH_UTC || "").toString();
+    if (!raw) return null;
+    const d = new Date(raw);
+    return isNaN(+d) ? null : d;
   }
 
-  // ---------- DOM bootstrap ----------
-  function ensureRoot(){
-    let root = document.querySelector('.aub-day-odometer');
-    if (!root) {
-      root = document.createElement('div');
-      root.className = 'aub-day-odometer';
-      document.body.prepend(root);
-    }
-    if (!root.querySelector('.aub-label')) {
-      const lb = document.createElement('span');
-      lb.className = 'aub-label';
-      lb.textContent = 'DAY';
-      root.prepend(lb);
-    }
-    return root;
+  function daysSinceLaunchUTC(launchDate) {
+    const n = new Date();
+    const nowUTC = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), n.getUTCHours(), n.getUTCMinutes(), n.getUTCSeconds(), n.getUTCMilliseconds());
+    const l = launchDate;
+    const launchUTC = Date.UTC(l.getUTCFullYear(), l.getUTCMonth(), l.getUTCDate(), l.getUTCHours(), l.getUTCMinutes(), l.getUTCSeconds(), l.getUTCMilliseconds());
+    return Math.max(1, Math.floor((nowUTC - launchUTC) / 86400000) + 1);
   }
 
-  function ensureSlots(n){
-    const root = ensureRoot();
-    let slots = Array.from(root.querySelectorAll('.aub-slot'));
-    const gap = root.querySelector('.aub-gap') || root.appendChild(Object.assign(document.createElement('i'), {className:'aub-gap'}));
+  function padNN(n) { const s = String(n); return s.length >= 2 ? s : ("0" + s).slice(-2); }
 
-    // add missing slots
-    while (slots.length < n){
-      const slot = document.createElement('div');
-      slot.className = 'aub-slot';
-      const reel = document.createElement('div');
-      reel.className = 'aub-reel';
+  function msUntilNextUtcMidnight() {
+    const n = new Date();
+    const next = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1, 0, 0, 0, 0);
+    const nowUTC = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), n.getUTCHours(), n.getUTCMinutes(), n.getUTCSeconds(), n.getUTCMilliseconds());
+    return Math.max(0, next - nowUTC);
+  }
 
-      // build digits 0–9 repeated, plus one extra 0 to ease exact landing
-      let html = '';
-      for (let r=0; r<REPEAT_ROWS; r++){
-        for (let i=0; i<10; i++){
-          html += `<div class="aub-glyph">${DIGITS[i]}</div>`;
+  function prefersReduced() {
+    try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+    catch { return false; }
+  }
+
+  function ensureStyleTag() {
+    if (document.getElementById(STYLE_ID)) return;
+    const css = `
+:root {
+  --aub-size: ${DEFAULT_HEIGHT}px;
+  --aub-width-mult: ${DEFAULT_WIDTH_MULT};
+  --aub-glow: ${GLOW_REST};
+  --aub-seam-nudge-x: 0px;
+  --aub-seam-nudge-y: 0px;
+  --aub-slot-gap: 0px;
+  --aub-font-scale: 0.86;
+}
+.aub-day-odometer {
+  position: relative;
+  display: inline-flex;
+  gap: var(--aub-slot-gap);
+  background: #000;
+  color: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.aub-slot {
+  position: relative;
+  height: var(--aub-size);
+  width: calc(var(--aub-size) * var(--aub-width-mult));
+  overflow: hidden;
+  contain: layout paint size;
+}
+.aub-reel {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  will-change: auto;
+  transform: translate3d(var(--aub-seam-nudge-x), var(--aub-seam-nudge-y), 0);
+}
+.aub-glyph {
+  height: var(--aub-size);
+  line-height: var(--aub-size);
+  display: flex; align-items: center; justify-content: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: calc(var(--aub-size) * var(--aub-font-scale));
+  text-shadow:
+    0 0 calc(2px * var(--aub-glow)) currentColor,
+    0 0 calc(6px * var(--aub-glow)) rgba(255,255,255,0.5);
+}
+.aub-slot::before,
+.aub-slot::after {
+  content: "";
+  position: absolute; left: 0; right: 0;
+  height: 50%;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.10), rgba(255,255,255,0.00));
+}
+.aub-slot::before { top: 0; }
+.aub-slot::after { bottom: 0; transform: scaleY(-1); }
+`.trim();
+    const tag = document.createElement("style");
+    tag.id = STYLE_ID;
+    tag.textContent = css;
+    document.head.appendChild(tag);
+  }
+
+  function q(container) {
+    const slots = Array.from(container.querySelectorAll(".aub-slot"));
+    return { slots, reels: slots.map(n => n.querySelector(".aub-reel")) };
+  }
+
+  function build(container, digits) {
+    container.innerHTML = "";
+    container.classList.add("aub-day-odometer");
+    for (let i = 0; i < digits; i++) {
+      const slot = document.createElement("div");
+      slot.className = "aub-slot";
+      const reel = document.createElement("div");
+      reel.className = "aub-reel";
+      for (let d = 0; d <= 9; d++) {
+        const g = document.createElement("div");
+        g.className = "aub-glyph";
+        g.textContent = String(d);
+        reel.appendChild(g);
+      }
+      slot.appendChild(reel);
+      container.appendChild(slot);
+    }
+    return q(container);
+  }
+
+  function measureSlotHeight(container) {
+    const one = container.querySelector(".aub-slot");
+    return one ? Math.round(one.getBoundingClientRect().height)
+               : Math.round(parseFloat(getComputedStyle(container).getPropertyValue("--aub-size")) || DEFAULT_HEIGHT);
+  }
+
+  function makeAnimator(container) {
+    const api = {};
+    let state = { digits: 2, value: 0, slotHeight: 0, anims: [] };
+
+    function setGlow(target, ms) {
+      const docEl = container;
+      const start = parseFloat(getComputedStyle(docEl).getPropertyValue("--aub-glow")) || GLOW_REST;
+      const t0 = nowPerf(); const dur = Math.max(0, ms|0);
+      function loop() {
+        const t = dur ? clamp((nowPerf() - t0) / dur, 0, 1) : 1;
+        const v = lerp(start, target, EASE(t));
+        docEl.style.setProperty("--aub-glow", v.toFixed(3));
+        if (t < 1) requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function setReelTransform(reel, y) {
+      reel.style.transform = `translate3d(var(--aub-seam-nudge-x), calc(var(--aub-seam-nudge-y) + ${(-y).toFixed(3)}px), 0)`;
+    }
+
+    function instantTo(value) {
+      const s = padNN(value);
+      if (s.length !== state.digits) { state.digits = s.length; build(container, state.digits); }
+      const { reels } = q(container);
+      state.slotHeight = measureSlotHeight(container);
+      for (let i = 0; i < s.length; i++) setReelTransform(reels[i], (+s[i]) * state.slotHeight);
+      state.value = value;
+    }
+
+    function getCurrentDigit(reel, slotH) {
+      const m = /translate3d\([^,]+,\s*calc\([^)]*\+\s*([-\d.]+)px\)/.exec(reel.style.transform);
+      if (!m) return NaN;
+      const y = -parseFloat(m[1] || "0");
+      const d = Math.round(y / slotH);
+      return ((d % 10) + 10) % 10;
+    }
+
+    function rndInt(a, b) { return (Math.random() * (b - a + 1) + a) | 0; }
+
+    function animateTo(value) {
+      const reduced = (window.AUB_FORCE_MOTION !== true) && (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      if (reduced) { instantTo(value); return; }
+
+      const s = padNN(value);
+      if (s.length !== state.digits) { state.digits = s.length; build(container, state.digits); }
+      const { reels } = q(container);
+      state.slotHeight = measureSlotHeight(container);
+
+      reels.forEach(r => { r.style.willChange = "transform"; });
+      const t0 = nowPerf();
+      const desync = [0, 60, 110, 150];
+      const targets = s.split("").map(Number);
+
+      setGlow(GLOW_ACTIVE, 160);
+
+      const plans = targets.map((target, idx) => {
+        const startDigit = getCurrentDigit(reels[idx], state.slotHeight);
+        const base = isNaN(startDigit) ? 0 : startDigit;
+        const ticks = Math.floor(lerp(SETTLE_TICKS[0], SETTLE_TICKS[1] + 0.999, Math.random()));
+        const seq = [];
+        let d = base;
+        for (let k = 0; k < Math.max(0, ticks - 1); k++) { d = (d + 1) % 10; seq.push(d); }
+        seq.push(target);
+        const durations = seq.map(() => rndInt(TICK_MS[0], TICK_MS[1]));
+        return { seq, durations };
+      });
+
+      let phase = "scramble";
+      const lastDigit = Array(reels.length).fill(null);
+
+      (function loop() {
+        const now = nowPerf();
+
+        if (phase === "scramble") {
+          const t = clamp((now - t0) / SCRAMBLE_MS, 0, 1);
+          const ease = EASE(t);
+          for (let i = 0; i < reels.length; i++) {
+            const reel = reels[i];
+            const jitter = (Math.sin((now + i * 137) * 0.02) + 1) * 0.5;
+            const randomDigit = Math.floor((ease * 10 + 10 * jitter + Math.random() * 10)) % 10;
+            if (randomDigit !== lastDigit[i]) {
+              setReelTransform(reel, randomDigit * state.slotHeight);
+              lastDigit[i] = randomDigit;
+            }
+          }
+          if (t < 1) { requestAnimationFrame(loop); return; }
+          phase = "settle";
+          for (let i = 0; i < reels.length; i++) {
+            const p = plans[i];
+            (state.anims[i] = { idx: i, step: 0, seq: p.seq, durations: p.durations, t0: now + (desync[i] || 0) });
+          }
+          requestAnimationFrame(loop);
+          return;
+        }
+
+        let allDone = true;
+        for (let i = 0; i < reels.length; i++) {
+          const a = state.anims[i]; if (!a) continue;
+          if (a.step >= a.seq.length) continue;
+          allDone = false;
+          const dur = a.durations[a.step];
+          const t = clamp((now - a.t0) / dur, 0, 1);
+          const targetDigit = a.seq[a.step];
+          const prevDigit = a.step === 0 ? (getCurrentDigit(reels[i], state.slotHeight) || targetDigit) : a.seq[a.step - 1];
+          const yPrev = prevDigit * state.slotHeight;
+          const y = targetDigit * state.slotHeight;
+          const yNow = lerp(yPrev, y, EASE(t));
+          setReelTransform(reels[i], yNow);
+          if (t >= 1) { setReelTransform(reels[i], y); a.step++; a.t0 = now; }
+        }
+        if (!allDone) { requestAnimationFrame(loop); return; }
+        reels.forEach(r => { r.style.willChange = "auto"; });
+        setGlow(GLOW_REST, 280);
+      })();
+
+      state.value = value;
+    }
+
+    api.instantTo = instantTo;
+    api.animateTo = animateTo;
+    api.value = () => state.value;
+    api.slotHeight = () => state.slotHeight;
+    return api;
+  }
+
+  function ensureHTML() {
+    // If container is missing, create one at body end (defensive)
+    if (!document.querySelector(".aub-day-odometer")) {
+      const el = document.createElement("div");
+      el.className = "aub-day-odometer";
+      document.body.appendChild(el);
+    }
+  }
+
+  function boot() {
+    ensureStyleTag();
+    ensureHTML();
+
+    const container = document.querySelector(".aub-day-odometer");
+    build(container, 2);
+    const anim = makeAnimator(container);
+
+    const launch = readLaunchUTC();
+    const update = () => {
+      const d = launch ? daysSinceLaunchUTC(launch) : 0;
+      anim.animateTo(d);
+    };
+
+    update();
+
+    const scheduleRollover = () => {
+      const ms = msUntilNextUtcMidnight();
+      const safe = clamp(ms, 250, 86400000);
+      setTimeout(() => { update(); scheduleRollover(); }, safe);
+    };
+    scheduleRollover();
+
+    // Console API
+    window.AUB_SIZE = function (heightPx, widthArg) {
+      const h = Math.max(16, +heightPx || DEFAULT_HEIGHT);
+      document.documentElement.style.setProperty("--aub-size", h + "px");
+      if (widthArg !== undefined && widthArg !== null) {
+        const w = +widthArg;
+        if (w > 0 && w <= 3) {
+          document.documentElement.style.setProperty("--aub-width-mult", String(w));
+        } else if (w > 3) {
+          const mult = w / h;
+          document.documentElement.style.setProperty("--aub-width-mult", String(mult.toFixed(4)));
         }
       }
-      html += `<div class="aub-glyph">0</div>`;
-      reel.innerHTML = html;
-
-      // randomize starting offset so reels aren’t synced
-      const h = sizePx();
-      const startRow = (Math.random()*10|0) + 10; // skip a couple rows down
-      reel.style.transform = `translate3d(0,${-startRow*h}px,0)`;
-      reel.dataset.row = String(startRow);
-
-      slot.appendChild(reel);
-      gap.before(slot);
-      slots.push(slot);
-    }
-
-    // trim extra slots
-    while (slots.length > n){
-      slots.pop().remove();
-    }
-    return Array.from(root.querySelectorAll('.aub-slot'));
-  }
-
-  // ---------- Helpers ----------
-  const sizePx = () => parseFloat(getComputedStyle(document.querySelector('.aub-day-odometer')).getPropertyValue('--aub-size')) || 45;
-
-  function currentRow(reel){
-    return Number(reel.dataset.row || '0');
-  }
-
-  function spinReelToDigit(reel, finalDigit, {cycles=12, duration=1200}={}){
-    // map glyph index 0..9 to the row we want to land on
-    const start = currentRow(reel);
-    const diff  = (finalDigit - (start % 10) + 10) % 10;
-    const steps = cycles*10 + diff;                   // total digit steps
-    const target = start + steps;
-
-    // transition (add will-change only during motion)
-    const h = sizePx();
-    reel.style.willChange = 'transform';
-    reel.style.transition = `transform ${duration}ms ${EASE}`;
-    reel.style.transform  = `translate3d(0,${-target*h}px,0)`;
-
-    const cleanup = () => {
-      reel.removeEventListener('transitionend', cleanup);
-      reel.style.transition = 'none';
-      // collapse position so translate values stay small:
-      const normalized = (target % (10*REPEAT_ROWS));
-      reel.style.transform = `translate3d(0,${-normalized*h}px,0)`;
-      reel.dataset.row = String(normalized);
-      // give the compositor a frame to settle, then drop will-change
-      requestAnimationFrame(() => (reel.style.willChange = 'auto'));
+      anim.instantTo(anim.value());
     };
-    reel.addEventListener('transitionend', cleanup);
-  }
-
-  function shuffleTo(num, {scramble=650, settle=800}={}){
-    const root  = ensureRoot();
-    const s     = String(num).padStart(2,'0'); // 2 digits
-    const slots = ensureSlots(s.length);
-    root.setAttribute('aria-label', `DAY ${s}`);
-
-    // Phase A: quick random scramble (desynced)
-    slots.forEach((slot, i) => {
-      const reel = slot.firstElementChild;
-      const randDigit = Math.floor(Math.random()*10);
-      const dur  = scramble + Math.floor(i*70) + Math.floor(Math.random()*80);
-      spinReelToDigit(reel, randDigit, {cycles: 6 + (i*2), duration: dur});
-    });
-
-    // Phase B: 3 slow ticks to the final value
-    setTimeout(() => {
-      [...s].forEach((ch, i) => {
-        const reel = slots[i].firstElementChild;
-        const d = Number(ch);
-        // three gentle approach spins with shorter cycles, then land
-        const seq = [
-          {cycles: 3 + i, dur: 220},
-          {cycles: 2 + i, dur: 260},
-          {cycles: 1 + i, dur: 320},
-          {cycles: 1 + i, dur: settle + i*120}
-        ];
-        let t = 0;
-        seq.forEach((step, k) => {
-          t += (k ? seq[k-1].dur + 30 : 0);
-          setTimeout(() => {
-            const target = (k === seq.length-1) ? d : Math.floor(Math.random()*10);
-            spinReelToDigit(reel, target, {cycles: step.cycles, duration: step.dur});
-          }, t);
-        });
+    window.AUB_TUNE_Y = function (delta) {
+      const cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--aub-seam-nudge-y")) || 0;
+      document.documentElement.style.setProperty("--aub-seam-nudge-y", (cur + (+delta || 0)).toFixed(2) + "px");
+      anim.instantTo(anim.value());
+    };
+    window.AUB_TUNE_X = function (delta) {
+      const cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--aub-seam-nudge-x")) || 0;
+      document.documentElement.style.setProperty("--aub-seam-nudge-x", (cur + (+delta || 0)).toFixed(2) + "px");
+      anim.instantTo(anim.value());
+    };
+    window.AUB_SHUFFLE = function (n) { const v = Math.max(0, Math.floor(+n || 0)); anim.animateTo(v); return v; };
+    window.AUB_STATUS = function () {
+      const slotH = anim.slotHeight();
+      const reels = Array.from(document.querySelectorAll(".aub-reel"));
+      const offsets = reels.map(r => {
+        const m = /translate3d\([^,]+,\s*calc\([^)]*\+\s*([-\d.]+)px\)/.exec(r.style.transform);
+        return m ? +m[1] : 0;
       });
-    }, scramble + 40);
+      return {
+        height_px: slotH,
+        width_mult: getComputedStyle(document.documentElement).getPropertyValue("--aub-width-mult").trim(),
+        glow: getComputedStyle(document.querySelector(".aub-day-odometer")).getPropertyValue("--aub-glow").trim(),
+        value: anim.value(),
+        reel_offsets_px: offsets,
+        slots: reels.length
+      };
+    };
+    window.AUB_FORCE_MOTION = window.AUB_FORCE_MOTION === true;
+
+    // Minimal HUD (safe)
+    window.AUB_LIST = function () {
+      const nodes = Array.from(document.querySelectorAll(".aub-day-odometer")).map((el, i) => ({ id: i + 1, visible: el.style.display !== "none", el }));
+      return nodes.map(n => ({ id: n.id, visible: n.visible }));
+    };
+    window.AUB_KEEP = function (id) {
+      const nodes = Array.from(document.querySelectorAll(".aub-day-odometer"));
+      nodes.forEach((el, i) => { el.style.display = (i + 1) === +id ? "" : "none"; });
+      return window.AUB_LIST();
+    };
+    window.AUB_HIDE = function (id) {
+      const el = Array.from(document.querySelectorAll(".aub-day-odometer"))[(+id || 0) - 1];
+      if (el) el.style.display = "none";
+      return window.AUB_LIST();
+    };
+    window.AUB_SHOW = function (id) {
+      const el = Array.from(document.querySelectorAll(".aub-day-odometer"))[(+id || 0) - 1];
+      if (el) el.style.display = "";
+      return window.AUB_LIST();
+    };
+    window.AUB_SHOWALL = function () {
+      Array.from(document.querySelectorAll(".aub-day-odometer")).forEach(el => el.style.display = "");
+      return window.AUB_LIST();
+    };
+    window.AUB_MAKE_PERMANENT = function () { return "noop"; };
   }
 
-  // Day math (UTC, 1-indexed, rolls at UTC midnight)
-  function dayNumber(){
-    const ms = Date.now() - LAUNCH_UTC.getTime();
-    return Math.max(1, Math.floor(ms/86400000) + 1);
-  }
-
-  // ---------- Public helpers ----------
-  window.AUB_SIZE = (h=45, wMult=1.10) => {
-    const root = ensureRoot();
-    root.style.setProperty('--aub-size', `${h}px`, 'important');
-    root.style.setProperty('--aub-width-mult', String(wMult), 'important');
-    // also lock slot width/height directly to beat any external CSS
-    root.querySelectorAll('.aub-slot').forEach(el => {
-      el.style.height = `${h}px`;
-      const w = (h * wMult).toFixed(2)+'px';
-      el.style.width = w; el.style.minWidth = w;
-    });
-    return {h, w: h*wMult};
-  };
-  window.AUB_SHUFFLE = (n) => shuffleTo(n);
-  window.AUB_TUNE_Y  = (delta=0) => {
-    // vertical micro-nudge by adjusting reel base row fractional offset
-    ensureSlots(2).forEach(s => {
-      const reel = s.firstElementChild;
-      const h = sizePx();
-      const cur = reel.style.transform.match(/translate3d\(0,(-?[\d.]+)px,0\)/);
-      const y = cur ? parseFloat(cur[1]) : 0;
-      reel.style.transform = `translate3d(0,${y + delta*h}px,0)`;
-    });
-  };
-  window.AUB_STATUS = () => {
-    const slots = ensureSlots(2);
-    const h = sizePx();
-    return slots.map(s => ({ h, y: s.firstElementChild.style.transform }));
-  };
-
-  // ---------- Boot ----------
-  const n = dayNumber();
-  shuffleTo(n, {scramble: 500, settle: 700});
-  // midnight UTC rollover
-  const tick = () => {
-    const now = new Date();
-    const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()+1, 0,0,0,0);
-    setTimeout(() => { shuffleTo(dayNumber(), {scramble: 450, settle: 650}); tick(); }, next - now);
-  };
-  tick();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
+  else boot();
 })();
