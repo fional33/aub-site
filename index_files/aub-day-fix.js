@@ -5,7 +5,7 @@
   "use strict";
 
   const DEFAULT_HEIGHT = 45;
-  const DEFAULT_WIDTH_MULT = 1.10;
+  const DEFAULT_WIDTH_MULT = 0.68;
   const GLOW_REST = 0.25;
   const GLOW_ACTIVE = 0.80;
   const SCRAMBLE_MS = 700;
