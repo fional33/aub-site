@@ -27,7 +27,7 @@
   --aub-seam-nudge-x:0px;
   --aub-seam-nudge-y:0px;
   --aub-slot-gap:0px;
-  --aub-font-scale:0.86;
+  --aub-font-scale:0.80;
 }
 .aub-day-odometer.aub-day-odometer{
   position:relative;
@@ -78,7 +78,7 @@
 .aub-day-odometer .aub-slot::after{
   content:""; position:absolute; left:0; right:0; height:50%;
   pointer-events:none;
-  background:linear-gradient(to bottom, rgba(255,255,255,0.10), rgba(255,255,255,0.00));
+  background:linear-gradient(to bottom, rgba(255,255,255,0.20), rgba(255,255,255,0.00));
 }
 .aub-day-odometer .aub-slot::before{ top:0; }
 .aub-day-odometer .aub-slot::after{ bottom:0; transform:scaleY(-1); }
