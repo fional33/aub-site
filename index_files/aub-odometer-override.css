@@ -1,21 +1,23 @@
-/* --- FORCE SHAPE CONTROL --- */
-.aub-day-odometer { --aub-size: 25px; }               /* height knob */
-.aub-day-odometer .aub-slot {
+/* Size knobs (make these your defaults) */
+.aub-day-odometer {
+  --aub-size: 36px !important;         /* height */
+  --aub-width-mult: 1.10 !important;   /* width multiplier */
+  transform: none !important;          /* avoid accidental scaling */
+}
+
+/* Slot box uses the knobs above */
+.aub-day-odometer .aub-slot{
   height: var(--aub-size) !important;
   min-height: var(--aub-size) !important;
   max-height: var(--aub-size) !important;
-  width: calc(var(--aub-size) * 0.8) !important;     /* width knob */
+  width: calc(var(--aub-size) * var(--aub-width-mult)) !important;
   box-sizing: border-box !important;
 }
-/* make sure glyphs fit the height perfectly */
-.aub-day-odometer .aub-glyph {
+
+/* Glyph sizing tracks height */
+.aub-day-odometer .aub-glyph{
   line-height: var(--aub-size) !important;
-  font-size: calc(var(--aub-size) * 0.74) !important;  /* tweak if needed */
+  font-size: calc(var(--aub-size) * 0.74) !important;
   letter-spacing: -0.02em !important;
+  transform-origin: 50% 50% !important;
 }
-/* stop any accidental scale from changing shape */
-.aub-day-odometer .aub-reel,
-.aub-day-odometer .aub-glyph { transform-origin: 50% 50% !important; }
-/* if any component set inline width/height before, null it out */
-.aub-day-odometer .aub-slot[style],
-.aub-day-odometer .aub-glyph[style] { height: var(--aub-size) !important; width: calc(var(--aub-size)*1.10) !important; font-size: calc(var(--aub-size)*0.74) !important; }

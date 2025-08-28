@@ -226,3 +226,7 @@
   }
 })();
 
+window.AUB_SIZE = (px) => {
+  const r = document.querySelector(".aub-day-odometer");
+  if (r) r.style.setProperty("--aub-size", px+"px", "important");
+};
