@@ -3,7 +3,7 @@
   "use strict";
 
   // ===== Defaults =====
-  const DEFAULT_HEIGHT = 45;          // px
+  const DEFAULT_HEIGHT = 56;          // px
   const DEFAULT_WIDTH_MULT = 0.68;    // slot width = height * mult
   const GLOW_REST = 1.0;              // always-on
   const GLOW_ACTIVE = 1.0;            // always-on during anim
@@ -257,6 +257,7 @@
 
     const container=document.querySelector(".aub-day-odometer") || (()=>{const el=document.createElement("div"); el.className="aub-day-odometer aub-day-odometer"; document.body.appendChild(el); return el;})();
     build(container,2);
+    container.style.setProperty("transform","translateX(-0.5ch)","important");
     const anim=makeAnimator(container);
 
     const launch=readLaunchUTC();
