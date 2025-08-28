@@ -6,8 +6,8 @@
 
   const DEFAULT_HEIGHT = 45;
   const DEFAULT_WIDTH_MULT = 0.68;
-  const GLOW_REST = 0.25;
-  const GLOW_ACTIVE = 0.80;
+  const GLOW_REST = 1.0;
+  const GLOW_ACTIVE = 1.0;
   const SCRAMBLE_MS = 700;
   const SETTLE_TICKS = [3, 4];
   const TICK_MS = [140, 220];
@@ -61,6 +61,7 @@
   --aub-font-scale: 0.86;
 }
 .aub-day-odometer {
+  vertical-align: -0.1ch;
   position: relative;
   display: inline-flex;
   gap: var(--aub-slot-gap);
@@ -96,6 +97,15 @@
   text-shadow:
     0 0 calc(2px * var(--aub-glow)) currentColor,
     0 0 calc(6px * var(--aub-glow)) rgba(255,255,255,0.5);
+}
+/* neon glow override */
+.aub-day-odometer .aub-glyph {
+  color: #fff;
+  text-shadow:
+    0 0 1px rgba(0,220,255,0.95),
+    0 0 4px rgba(0,220,255,0.92),
+    0 0 10px rgba(0,220,255,0.88),
+    0 0 22px rgba(0,220,255,0.78);
 }
 .aub-slot::before,
 .aub-slot::after {
