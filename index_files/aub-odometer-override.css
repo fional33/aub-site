@@ -1,10 +1,10 @@
 /* --- FORCE SHAPE CONTROL --- */
-.aub-day-odometer { --aub-size: 45px; }               /* height knob */
+.aub-day-odometer { --aub-size: 25px; }               /* height knob */
 .aub-day-odometer .aub-slot {
   height: var(--aub-size) !important;
   min-height: var(--aub-size) !important;
   max-height: var(--aub-size) !important;
-  width: calc(var(--aub-size) * 1.10) !important;     /* width knob */
+  width: calc(var(--aub-size) * 0.8) !important;     /* width knob */
   box-sizing: border-box !important;
 }
 /* make sure glyphs fit the height perfectly */
