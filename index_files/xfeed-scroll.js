@@ -1,15 +1,16 @@
-(() => {
-  const Y = 2490; // <— change this number anytime
-  function wire() {
-    const link = [...document.querySelectorAll('nav a')].find(a => /X\s*FEED/i.test(a.textContent || ''));
-    if (!link) return;
-    link.setAttribute('href', '#');
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
+(function () {
+  var Y = 2490; // <— change this number to move the landing spot
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('a');
+    if (!a) return;
+    var txt = (a.textContent || '').trim();
+    if (/^X\s*FEED$/i.test(txt) || a.dataset.xfeed === '1') {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
       window.scrollTo({ top: Y, behavior: 'smooth' });
-    }, { capture: true });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire, { once: true });
-  else wire();
+    }
+  }, { capture: true, passive: false });
+
+  // Quick helper to retune without editing files:
+  window.AUB_SET_XFEED_Y = function (n) { Y = +n || 0; console.log('X FEED →', Y); };
 })();
