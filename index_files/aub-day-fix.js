@@ -4,7 +4,7 @@
 
   // ===== Defaults =====
   const DEFAULT_HEIGHT = 56;          // px
-  const DEFAULT_WIDTH_MULT = 0.68;    // slot width = height * mult
+  const DEFAULT_WIDTH_MULT = 0.60;    // slot width = height * mult
   const GLOW_REST = 1.0;              // always-on
   const GLOW_ACTIVE = 1.0;            // always-on during anim
   const SCRAMBLE_MS = 700;
