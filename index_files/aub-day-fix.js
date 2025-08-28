@@ -3,8 +3,8 @@
   "use strict";
 
   // ===== Defaults =====
-  const DEFAULT_HEIGHT = 58;          // px
-  const DEFAULT_WIDTH_MULT = 0.64;    // slot width = height * mult
+  const DEFAULT_HEIGHT = 60;          // px
+  const DEFAULT_WIDTH_MULT = 0.66;    // slot width = height * mult
   const GLOW_REST = 1.0;              // always-on
   const GLOW_ACTIVE = 1.0;            // always-on during anim
   const SCRAMBLE_MS = 700;
