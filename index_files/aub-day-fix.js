@@ -61,6 +61,11 @@
   --aub-font-scale: 0.86;
 }
 .aub-day-odometer {
+  display: inline-flex;
+  vertical-align: -0.1ch;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: max-content;
   vertical-align: -0.1ch;
   vertical-align: -0.1ch;
   position: relative;
@@ -98,6 +103,15 @@
   text-shadow:
     0 0 calc(2px * var(--aub-glow)) currentColor,
     0 0 calc(6px * var(--aub-glow)) rgba(255,255,255,0.5);
+}
+/* AUBSNAP neon override (persistent) */
+.aub-day-odometer .aub-glyph {
+  color: #fff !important;
+  text-shadow: \
+    0 0 1px rgba(0,220,255,0.95), \
+    0 0 4px rgba(0,220,255,0.92), \
+    0 0 10px rgba(0,220,255,0.88), \
+    0 0 22px rgba(0,220,255,0.78) !important;
 }
 /* neon glow override */
 .aub-day-odometer .aub-glyph {
