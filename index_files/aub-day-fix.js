@@ -187,7 +187,6 @@
     }
     function rndInt(a,b){ return (Math.random()*(b-a+1)+a)|0; }
     function animateTo(value){
-      const reduced=(window.AUB_FORCE_MOTION!==true) && (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
       if(reduced){ instantTo(value); return; }
 
       const s=padNN(value);
