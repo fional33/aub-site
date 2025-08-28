@@ -1,7 +1,7 @@
 /* Permanent size for the DAY odometer slots */
-.aub-day-odometer { --aub-size: 55px; }
+.aub-day-odometer { --aub-size: 65px; }
 .aub-day-odometer .aub-slot {
   /* lock height to --aub-size and width to 1.10× height */
   height: var(--aub-size) !important;
-  width: calc(var(--aub-size) * 1.20) !important;
+  width: calc(var(--aub-size) * 1.30) !important;
 }
