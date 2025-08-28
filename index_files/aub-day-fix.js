@@ -1,12 +1,12 @@
-/* AUBSNAP — Odometer (DAY NN) Shuffler — persistent neon + width lock + baseline -0.1ch */
+/* AUBSNAP — Odometer (DAY NN) — stable shuffler, persistent neon, size lock */
 (function () {
   "use strict";
 
-  // ===== Defaults =====
-  const DEFAULT_HEIGHT = 60;          // px
-  const DEFAULT_WIDTH_MULT = 0.66;    // slot width = height * mult
-  const GLOW_REST = 1.0;              // always-on
-  const GLOW_ACTIVE = 1.0;            // always-on during anim
+  // ===== Config =====
+  const DEFAULT_HEIGHT = 60;      // px
+  const DEFAULT_WIDTH_MULT = 0.66;
+  const GLOW_REST = 1.0;
+  const GLOW_ACTIVE = 1.0;
   const SCRAMBLE_MS = 700;
   const SETTLE_TICKS = [3, 4];
   const TICK_MS = [140, 220];
@@ -16,7 +16,7 @@
   const lerp = (a,b,t)=>a+(b-a)*t;
   const nowPerf = () => (typeof performance!=="undefined"?performance.now():Date.now());
 
-  // ===== CSS (high specificity + anti-stretch) =====
+  // ===== CSS (no transform on .aub-reel here; JS controls it) =====
   function ensureStyleTag() {
     if (document.getElementById(STYLE_ID)) return;
     const css = `
@@ -25,14 +25,15 @@
   --aub-width-mult:${DEFAULT_WIDTH_MULT};
   --aub-glow:${GLOW_REST};
   --aub-seam-nudge-x:0px;
-  --aub-seam-nudge-y:0.00px;
+  --aub-seam-nudge-y:0px;
   --aub-slot-gap:0px;
   --aub-font-scale:0.86;
 }
-.aub-day-odometer.aub-day-odometer { /* doubled selector => higher specificity */
+.aub-day-odometer.aub-day-odometer{
   position:relative;
   display:inline-flex;
   vertical-align:-0.1ch;
+  transform:translateX(-0.5ch);
   flex:0 0 auto;
   width:auto;
   max-width:max-content;
@@ -58,16 +59,15 @@
 .aub-day-odometer .aub-reel{
   position:absolute; left:0; top:0; width:100%;
   will-change:auto;
-  transform:translate3d(var(--aub-seam-nudge-x),var(--aub-seam-nudge-y),0);
+  /* transform applied by JS only */
 }
 .aub-day-odometer .aub-glyph{
   height:var(--aub-size);
   line-height:var(--aub-size);
   display:flex; align-items:center; justify-content:center;
-  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size:calc(var(--aub-size) * var(--aub-font-scale));
   color:#fff;
-  /* base glow (JS will reinforce with !important inline) */
   text-shadow:
     0 0 1px rgba(0,220,255,0.95),
     0 0 4px rgba(0,220,255,0.92),
@@ -117,7 +117,7 @@
   }
   function build(container,digits){
     container.innerHTML="";
-    container.classList.add("aub-day-odometer","aub-day-odometer"); // doubled class for specificity
+    container.classList.add("aub-day-odometer","aub-day-odometer");
     for(let i=0;i<digits;i++){
       const slot=document.createElement("div"); slot.className="aub-slot";
       const reel=document.createElement("div"); reel.className="aub-reel";
@@ -127,32 +127,12 @@
       }
       slot.appendChild(reel); container.appendChild(slot);
     }
-    applyNeon(container); // persist glow on fresh glyphs
-    lockWidths(container); // prevent layout stretching
     return q(container);
   }
-
-  // ===== Enforcement: neon + width lock =====
-  function applyNeon(container){
-    const glow="0 0 1px rgba(0,220,255,0.95), 0 0 4px rgba(0,220,255,0.92), 0 0 10px rgba(0,220,255,0.88), 0 0 22px rgba(0,220,255,0.78)";
-    container.querySelectorAll(".aub-glyph").forEach(g=>{
-      // inline !important beats any theme overrides or later stylesheets
-      g.style.setProperty("color","#fff","important");
-      g.style.setProperty("text-shadow",glow,"important");
-    });
-    container.style.setProperty("--aub-glow", String(GLOW_REST), "important");
-  }
-  function lockWidths(container){
-    const h = parseFloat(getComputedStyle(container).getPropertyValue("--aub-size")) || DEFAULT_HEIGHT;
-    const mult = parseFloat(getComputedStyle(container).getPropertyValue("--aub-width-mult")) || DEFAULT_WIDTH_MULT;
-    const slotW = Math.round(h * mult);
-    container.style.setProperty("flex","0 0 auto","important");
-    container.style.setProperty("width","auto","important");
-    container.style.setProperty("max-width","max-content","important");
-    container.querySelectorAll(".aub-slot").forEach(s=>{
-      s.style.setProperty("width", slotW+"px", "important");
-      s.style.setProperty("flex", "0 0 "+slotW+"px", "important");
-    });
+  function measureSlotHeight(container){
+    const one=container.querySelector(".aub-slot");
+    if (one) return Math.round(one.getBoundingClientRect().height);
+    const v=parseFloat(getComputedStyle(container).getPropertyValue("--aub-size")); return Math.round(v||DEFAULT_HEIGHT);
   }
 
   // ===== Animator =====
@@ -171,33 +151,42 @@
       })();
     }
     function setReelTransform(reel,y){
-      reel.style.transform=`translate3d(var(--aub-seam-nudge-x), calc(var(--aub-seam-nudge-y) + ${(-y).toFixed(3)}px), 0)`;
-    }
-    function measureSlotHeight(){ const one=container.querySelector(".aub-slot"); return one?Math.round(one.getBoundingClientRect().height):(parseFloat(getComputedStyle(container).getPropertyValue("--aub-size"))||DEFAULT_HEIGHT); }
-    function instantTo(value){
-      const s=padNN(value);
-      if(s.length!==state.digits){ state.digits=s.length; build(container,state.digits); }
-      const {reels}=q(container); state.slotHeight=measureSlotHeight();
-      for(let i=0;i<s.length;i++){ setReelTransform(reels[i], (+s[i])*state.slotHeight); }
-      state.value=value; applyNeon(container); lockWidths(container);
+      reel.style.setProperty("transform", `translate3d(var(--aub-seam-nudge-x), calc(var(--aub-seam-nudge-y) + ${(-y).toFixed(3)}px), 0)`, "important");
     }
     function getCurrentDigit(reel,slotH){
       const m=/translate3d\([^,]+,\s*calc\([^)]*\+\s*([-\d.]+)px\)/.exec(reel.style.transform);
       if(!m) return NaN; const y=-parseFloat(m[1]||"0"); const d=Math.round(y/slotH); return ((d%10)+10)%10;
     }
-    function rndInt(a,b){ return (Math.random()*(b-a+1)+a)|0; }
-    function animateTo(value){
-      if(reduced){ instantTo(value); return; }
-
+    function instantTo(value){
       const s=padNN(value);
       if(s.length!==state.digits){ state.digits=s.length; build(container,state.digits); }
-      const {reels}=q(container); state.slotHeight=measureSlotHeight();
+      const {reels}=q(container); state.slotHeight=measureSlotHeight(container);
+      for(let i=0;i<s.length;i++){ setReelTransform(reels[i], (+s[i])*state.slotHeight); }
+      state.value=value;
+    }
+    function rndInt(a,b){ return (Math.random()*(b-a+1)+a)|0; }
+
+    function animateTo(value){
+      // Always animate unless explicitly opted out
+      const s=padNN(value);
+      if(s.length!==state.digits){ state.digits=s.length; build(container,state.digits); }
+      const {reels}=q(container); state.slotHeight=measureSlotHeight(container);
       reels.forEach(r=>{ r.style.willChange="transform"; });
 
       const t0=nowPerf();
       const desync=[0,60,110,150];
       const targets=s.split("").map(Number);
       setGlow(GLOW_ACTIVE,160);
+
+      // Kick one digit so we always see motion, even if same digit
+      try {
+        reels.forEach(r=>{
+          const m=/translate3d\([^,]+,\s*calc\([^)]*\+\s*([-\d.]+)px\)/.exec(r.style.transform);
+          const cur = m ? -parseFloat(m[1]||"0") : 0;
+          const kick = cur + state.slotHeight;
+          setReelTransform(r, kick);
+        });
+      } catch(_) {}
 
       const plans=targets.map((target,idx)=>{
         const start=getCurrentDigit(reels[idx],state.slotHeight); const base=isNaN(start)?0:start;
@@ -237,12 +226,12 @@
         if(!allDone){ requestAnimationFrame(loop); return; }
         reels.forEach(r=>{ r.style.willChange="auto"; });
         setGlow(GLOW_REST,280);
-        applyNeon(container); lockWidths(container); // re-assert after anim
       })();
 
       state.value=value;
     }
 
+    // API
     api.instantTo=instantTo;
     api.animateTo=animateTo;
     api.value=()=>state.value;
@@ -256,17 +245,11 @@
 
     const container=document.querySelector(".aub-day-odometer") || (()=>{const el=document.createElement("div"); el.className="aub-day-odometer aub-day-odometer"; document.body.appendChild(el); return el;})();
     build(container,2);
-    container.style.setProperty("transform","translateX(-0.5ch)","important");
     const anim=makeAnimator(container);
 
-    const launch=readLaunchUTC();
-    const update=()=>{ const d=launch?daysSinceLaunchUTC(launch):0; anim.animateTo(d); };
-    update();
-
-    (function schedule(){ const ms=clamp(msUntilNextUtcMidnight(),250,86400000); setTimeout(()=>{ update(); schedule(); }, ms); })();
-
-    // Console helpers
-    window.AUB_SIZE=function(heightPx,widthArg){
+    // Console helpers (defined immediately, even if update crashes)
+    window.AUB_FORCE_MOTION = true;
+    window.AUB_SIZE = function (heightPx,widthArg){
       const h=Math.max(16, +heightPx || DEFAULT_HEIGHT);
       document.documentElement.style.setProperty("--aub-size", h+"px");
       if(widthArg!==undefined && widthArg!==null){
@@ -274,7 +257,7 @@
         if(w>0 && w<=3) document.documentElement.style.setProperty("--aub-width-mult", String(w));
         else if(w>3){ const mult=w/h; document.documentElement.style.setProperty("--aub-width-mult", String(mult.toFixed(4))); }
       }
-      anim.instantTo(anim.value()); applyNeon(container); lockWidths(container);
+      anim.instantTo(anim.value());
     };
     window.AUB_TUNE_Y=function(delta){
       const cur=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--aub-seam-nudge-y"))||0;
@@ -300,15 +283,17 @@
         slots: reels.length
       };
     };
-    if (typeof window.AUB_FORCE_MOTION==="undefined") window.AUB_FORCE_MOTION=false;
 
-    // Minimal HUD
-    window.AUB_LIST=function(){ return [...document.querySelectorAll(".aub-day-odometer")].map((el,i)=>({id:i+1,visible:el.style.display!=="none"})); };
-    window.AUB_KEEP=function(id){ const nodes=[...document.querySelectorAll(".aub-day-odometer")]; nodes.forEach((el,i)=>{ el.style.display=((i+1)===+id)?"":"none"; }); return window.AUB_LIST(); };
-    window.AUB_HIDE=function(id){ const el=[...document.querySelectorAll(".aub-day-odometer")][(+id||0)-1]; if(el) el.style.display="none"; return window.AUB_LIST(); };
-    window.AUB_SHOW=function(id){ const el=[...document.querySelectorAll(".aub-day-odometer")][(+id||0)-1]; if(el) el.style.display=""; return window.AUB_LIST(); };
-    window.AUB_SHOWALL=function(){ [...document.querySelectorAll(".aub-day-odometer")].forEach(el=>el.style.display=""); return window.AUB_LIST(); };
-    window.AUB_MAKE_PERMANENT=function(){ return "noop"; };
+    const launch=readLaunchUTC();
+    const update=()=>{ const d=launch?daysSinceLaunchUTC(launch):0; anim.animateTo(d); };
+
+    update();
+
+    // Exact UTC midnight rollover
+    (function schedule(){ const ms=clamp(msUntilNextUtcMidnight(),250,86400000); setTimeout(()=>{ update(); schedule(); }, ms); })();
+
+    // Safety: resync every 60s
+    setInterval(update, 60000);
   }
 
   if (document.readyState==="loading") document.addEventListener("DOMContentLoaded", boot, {once:true});
